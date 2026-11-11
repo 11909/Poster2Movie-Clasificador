@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Datos y archivos pesados: viven en Drive (P2M_DATOS / P2M_SALIDAS), nunca en el repo
+*.parquet
+*.npz
+datos/
+vectores/
+predicciones/
+modelos/
+
+# Los .pt solo se suben dentro de un release (son cabezas de KB a pocos MB)
+*.pt
+!releases/**/*.pt
