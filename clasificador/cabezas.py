@@ -11,7 +11,7 @@ PENDIENTE (Pareja B, idea 3), claves opcionales del MLP:
     "layernorm": true | false         (hoy solo false)
 
 Una clave que no se conoce da error: si no, un .yaml con `activacion: gelu` entrenaría con
-ReLU sin avisar. Para agregar un tipo o una clave, agréguenla aquí, documéntenla en el README,
+ReLU sin avisar. Para agregar un tipo o una clave, agréguenla aquí, documéntenla en docs/CONTRATOS.md,
 y quiten el `xfail` de su prueba en tests/test_pendientes.py. Si el tipo nuevo no existe en el
 repo principal, al integrar hay que llevar también este archivo.
 """

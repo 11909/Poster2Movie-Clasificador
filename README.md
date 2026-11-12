@@ -1,283 +1,228 @@
 # Poster2Movie — Clasificador
 
 Módulo 1 de [Poster2Movie](https://github.com/AndreaHortaHernandez/poster2movie): recibe el
-**cartel** de una película y regresa sus **géneros** (17 posibles, multi-etiqueta).
+**cartel** de una película y regresa sus **géneros** (17 posibles, multi-etiqueta). Aquí el equipo
+mejora el sistema base; cada modelo bueno se publica como **release** y el repo principal lo usa.
 
-Aquí el equipo del clasificador mejora el sistema base, con cada modelo publicado como
-**release** (su `.pt`, sus métricas y la receta para reproducirlo). La meta es subir el F1 de
-los géneros más débiles sin bajar el F1 macro:
+**Meta:** subir el F1 de los géneros débiles sin bajar el F1 macro de la base.
 
-| Género | F1 base (test) |
+| Género | F1 base (test) | Se confunde con |
+| --- | --- | --- |
+| Misterio | 0.27 | Thriller |
+| Historia | 0.33 | Drama, Guerra |
+| Fantasía | 0.36 | Aventura, Familia |
+| Crimen | 0.43 | Thriller |
+| **F1 macro (17 géneros)** | **0.537** | trivial: 0.065 |
+
+**Base:** CLIP ViT-B/32 congelado (cartel → vector de 512) + una capa lineal (→ 17 probabilidades)
++ un umbral por género calibrado en validación.
+
+---
+
+## Quién hace qué
+
+Tres parejas que trabajan en paralelo. Cada una tiene su guía con tareas, archivos, comandos y
+cuándo está "listo":
+
+| Pareja | Qué hace | Ideas | Guía |
+| --- | --- | --- | --- |
+| **A** · Qué ve el modelo | Vectores nuevos del cartel | 1 multi-recorte · 2 OCR · 7a nuevos codificadores | [docs/PAREJA_A.md](docs/PAREJA_A.md) |
+| **B** · Cómo aprende | Cabeza, pérdida y pistas de texto | 3 MLP · 4 Focal Loss · 5 zero-shot | [docs/PAREJA_B.md](docs/PAREJA_B.md) |
+| **C** · Combinar y publicar | Ensamble, apilamiento, releases e integración | 6 apilamiento · 7b ensamble | [docs/PAREJA_C.md](docs/PAREJA_C.md) |
+
+Cómo se conectan: **A** produce vectores → **B** y **C** los usan · **C** combina los modelos de
+A y B y publica. Los formatos que los unen están en [docs/CONTRATOS.md](docs/CONTRATOS.md).
+B y C empiezan desde el día uno con los vectores B/32 que ya existen.
+
+---
+
+## Primera vez
+
+1. **Accesos** (pídelos a quien administra el repo y la carpeta):
+   - Colaborador del repo `11909/Poster2Movie-Clasificador` en GitHub.
+   - `poster2movie_datos` (dataset, **solo lectura**) y `poster2movie_clasificador` (carpeta del
+     equipo, **con edición**) en Google Drive. Agrega las dos a *Mi unidad* como acceso directo
+     (clic derecho → *Organizar → Agregar acceso directo*).
+2. **Token de GitHub** para subir desde Colab: *Settings → Developer settings → Personal access
+   tokens → Tokens (classic)*, permiso `repo`. Guárdalo; los notebooks te lo piden al subir.
+   (Los *fine-grained* no sirven: el repo es de otra cuenta personal.)
+3. **Una sola persona, una sola vez:** abre `notebooks/00_reproducir_base.ipynb` en Colab y córrelo.
+   Reproduce la base y publica `v0.1.0`; en test debe dar F1 macro **0.537**.
+4. **Cada quien:** abre el notebook de su idea en Colab
+   (`https://colab.research.google.com/github/11909/Poster2Movie-Clasificador/blob/main/notebooks/<notebook>.ipynb`)
+   y corre la celda de preparación: monta Drive, clona el repo, se cambia a la rama de la idea e instala.
+5. Programa en `clasificador/*.py` (ver tu guía), corre el notebook y sube con su última celda.
+   Abre el Pull Request a `main`; lo revisa alguien de **otra** pareja.
+
+En tu computadora (opcional, para programar y correr las pruebas):
+
+```bash
+git clone --recurse-submodules https://github.com/11909/Poster2Movie-Clasificador.git
+cd Poster2Movie-Clasificador
+pip install -r requirements.txt pytest
+pytest -q -rxX                     # sin GPU ni Drive: dataset falso
+```
+
+Para entrenar en local, define `P2M_DATOS` y `P2M_SALIDAS` con las carpetas de Google Drive para
+escritorio.
+
+---
+
+## Flujo de un experimento
+
+1. Rama de la idea (`B-focal`): la crea la celda de preparación del notebook.
+2. Un `.yaml` en `experimentos/<pareja><idea>_<algo>.yaml` (hay de partida para cada idea). El campo
+   `nombre` = nombre del archivo.
+3. `entrenar` → `evaluar` (validación) → `comparar base <nombre>` (los 4 débiles salen primero).
+4. Sube el `.yaml`, el código y `resultados/<nombre>/` y abre el Pull Request. **Aunque no mejore,
+   se registra**: explicar por qué no funcionó también cuenta.
+5. Si mejora, la Pareja C lo publica como release.
+
+## Notebooks
+
+Uno por idea: dos personas editando el mismo `.ipynb` dan conflictos casi imposibles de fusionar.
+La lógica vive en `clasificador/*.py`; el notebook solo la corre.
+
+| Notebook | Pareja · idea | Qué hace | Necesita | GPU |
+| --- | --- | --- | --- | --- |
+| `00_reproducir_base` | todos | Reproduce la base y publica `v0.1.0`. **Una vez, antes que los demás** | nada | no |
+| `A1_multirecorte` | A · 1 | Vectores `relleno` y `3recortes` + experimentos | nada | sí |
+| `A2_ocr` | A · 2 | OCR en 2 mil carteles + experimento; si ayuda, todo el dataset | nada | sí |
+| `A7_codificadores` | A · 7a | Vectores CLIP L/14 y SigLIP + una cabeza por codificador | nada | sí |
+| `B3_cabezas` | B · 3 | Rejilla de MLP | vectores B/32 (ya existen) | no |
+| `B4_focal` | B · 4 | Focal Loss con γ = 1, 2, 3 | vectores B/32 | no |
+| `B5_zeroshot` | B · 5 | Pistas zero-shot + experimento imagen + pistas | vectores B/32 | una vez |
+| `C6_apilamiento` | C · 6 | Etapa 2 fuera de pliegue + mapa de calor 17 × 17 | cualquier experimento | no |
+| `C7_ensamble` | C · 7b | Ensamble contra cada modelo solo + memoria en T4 | experimentos de A7 (o B/32 mientras) | sí |
+| `C_release` | C | Comparar, publicar un release y probar un cartel | lo que se publique | no |
+
+Todos empiezan con la misma celda de preparación y terminan con la misma celda para **subir a la
+rama de la idea** (nunca a `main`). En Colab el repo se borra al cerrar: suban `resultados/` antes.
+
+## Cómo saber qué falta
+
+- `pytest -q -rxX`: cada idea tiene su prueba en `tests/test_pendientes.py`, marcada como pendiente
+  (`x`). Cuando la idea funciona, pytest avisa (`XPASS`) y se quita la marca en ese mismo PR.
+- Lo pendiente **avisa, nunca corre en silencio**: pedir `clip_l14`, `--variante ocr`,
+  `activacion: gelu` o `perdida: focal` antes de implementarlos da un error que dice qué pareja lo
+  hace y dónde.
+- `resultados/registro.csv` (se arma con `python -m clasificador.evaluar --registro`): todos los
+  experimentos con sus métricas en validación. Es la tabla "base contra cada intento" del reporte.
+
+---
+
+## Glosario de comandos
+
+Todos se corren desde la raíz del repo (en Colab, con `!` al inicio).
+
+**Preparar**
+
+| Comando | Qué hace |
 | --- | --- |
-| Misterio | 0.27 |
-| Historia | 0.33 |
-| Fantasía | 0.36 |
-| Crimen | 0.43 |
-| **F1 macro (17 géneros)** | **0.537** |
+| `git clone --recurse-submodules https://github.com/11909/Poster2Movie-Clasificador.git` | Clona el repo con el repo principal como submódulo (`poster2movie/`) |
+| `git submodule update --init` | Trae el submódulo si clonaste sin `--recurse-submodules` |
+| `pip install -r requirements.txt` | Instala las dependencias |
+| `pytest -q -rxX` | Corre las pruebas y lista las ideas pendientes |
+| `pytest -q tests/test_pendientes.py -k idea4` | Solo la prueba de una idea |
+
+**Vectores (contrato 1)**
+
+| Comando | Qué hace |
+| --- | --- |
+| `python -m clasificador.codificadores clip_b32 --variante centro` | Vectores de todo el dataset → `<P2M_SALIDAS>/vectores/clip_b32__centro.npz` |
+| `python -m clasificador.codificadores <codificador> --variante <variante>` | Igual con otro codificador (`clip_l14`, `siglip_base`…) o variante (`relleno`, `3recortes`, `ocr`) |
+| `... --muestra 2000` | Solo 2 mil películas fijas (prueba chica) |
+| `python -m clasificador.zeroshot clip_b32` | Pistas zero-shot → `vectores/clip_b32__zeroshot.npz` |
+
+**Entrenar y medir (contratos 2 y 3)**
+
+| Comando | Qué hace |
+| --- | --- |
+| `python -m clasificador.entrenar experimentos/<nombre>.yaml` | Entrena → `<P2M_SALIDAS>/modelos/<nombre>.pt` y `predicciones/<nombre>.npz` |
+| `python -m clasificador.evaluar <nombre>` | Métricas en **validación** → `resultados/<nombre>/` y registro |
+| `python -m clasificador.evaluar --registro` | Solo arma `resultados/registro.csv` con todos los experimentos |
+| `python -m clasificador.comparar <a> <b>` | Dos experimentos o releases, género por género (débiles primero) |
+| `python -m clasificador.comparar v0.1.0 v0.2.0 --split test` | Dos releases en test |
+
+**Combinar (contrato 4)**
+
+| Comando | Qué hace |
+| --- | --- |
+| `python -m clasificador.ensamble <nombre> <miembro1> <miembro2> ... [--pesos ...]` | Ensamble → `modelos/<nombre>.pt` |
+| `python -m clasificador.apilamiento <nombre> <miembro> ... [--pliegues 5]` | Apilamiento → `modelos/<nombre>.pt` |
+
+**Publicar**
+
+| Comando | Qué hace |
+| --- | --- |
+| `git checkout -b release-v0.2.0` | Rama del release |
+| `python -m clasificador.release v0.2.0 <nombre> --notas "..."` | Mide val y test y arma `releases/v0.2.0/` (`.pt`, métricas, receta, `LEEME.md`) |
+| `git tag v0.2.0 && git push origin v0.2.0` | Después de fusionar el PR, en `main`: GitHub Actions publica el release |
+
+**Usar el modelo (Python)**
+
+```python
+from clasificador.predictor import Clasificador
+Clasificador().predecir(imagen_pil)            # el release más reciente de releases/
+Clasificador("ruta/modelo.pt").predecir(img)   # un .pt normal o combinado
+# -> {"generos": ["Horror", ...], "probabilidades": {"Action": 0.12, ...}}
+```
+
+## Glosario de términos
+
+| Término | Qué es |
+| --- | --- |
+| **Codificador** | Modelo ya entrenado (CLIP, SigLIP) que convierte el cartel en un vector de números. No se entrena aquí. |
+| **Variante** | Cómo se prepara el cartel antes del codificador: `centro`, `relleno`, `3recortes`, `ocr`, `zeroshot`. |
+| **Vectores** | Archivo `<codificador>__<variante>.npz` con el vector de cada película (contrato 1). |
+| **Cabeza** | La parte que entrenamos: recibe el vector y da 17 probabilidades. |
+| **Umbral** | Por género, desde qué probabilidad se dice "sí". Se calibra en validación. |
+| **Experimento** | Un `.yaml` (vectores + cabeza + pérdida) y su `.pt` entrenado (contrato 2). |
+| **Combinado** | `.pt` que junta varias cabezas: ensamble y/o apilamiento (contrato 4). |
+| **F1 macro** | Promedio del F1 de los 17 géneros sin pesar por frecuencia. La métrica principal. |
+| **Validación / test** | Validación: con la que se elige. Test: solo se mide al publicar un release. |
+| **Release** | Versión publicada (`vX.Y.Z`) con su `.pt`, métricas y receta. La usa el repo principal. |
+| **`P2M_DATOS` / `P2M_SALIDAS`** | Carpeta del dataset (solo lectura) / carpeta compartida del equipo en Drive. |
+
+---
 
 ## Estructura
 
 ```
 poster2movie/            repo principal como submódulo (fijo en un commit): p2m.config, p2m.datos
 clasificador/
-├── codificadores.py     Pareja A · cartel -> vector (contrato 1)
-├── cabezas.py           Pareja B · lineal, MLP, ...
-├── perdidas.py          Pareja B · BCE, Focal Loss
-├── zeroshot.py          Pareja B · similitudes con frases por género
-├── apilamiento.py       Pareja C · etapa 2, predicciones fuera de pliegue
-├── ensamble.py          Pareja C · promedio de probabilidades
+├── codificadores.py     A · cartel -> vector (contrato 1); B agrega la variante zeroshot
+├── cabezas.py           B · lineal, MLP...
+├── perdidas.py          B · BCE, Focal Loss
+├── zeroshot.py          B · similitudes con frases por género
+├── apilamiento.py       C · etapa 2, predicciones fuera de pliegue
+├── ensamble.py          C · promedio de probabilidades
+├── combinado.py         contrato 4: cómo se combinan (lo usan evaluar y predictor)
 ├── entrenar.py          contrato 2
 ├── evaluar.py           contrato 3
 ├── comparar.py          modelo contra modelo, género por género
 ├── release.py           arma releases/<tag>/
 ├── predictor.py         Clasificador().predecir(), misma interfaz que el repo principal
 ├── datos.py, rutas.py   lectura de vectores y etiquetas, carpetas
+docs/                    guía de cada pareja y contratos
 experimentos/            un .yaml por experimento
-resultados/              una carpeta por experimento con sus métricas (sí van en git);
-                         registro.csv se arma con ellas (no va en git)
-releases/                una carpeta por release (sí van en git, .pt incluido)
-notebooks/               Colab: uno por idea (ver "Notebooks: trabajo en paralelo")
-tests/                   compatibilidad con el repo principal y flujo completo
+resultados/              una carpeta por experimento (sí va en git); registro.csv se arma (no va)
+releases/                una carpeta por release (sí va en git, .pt incluido)
+notebooks/               Colab: uno por idea
+tests/                   compatibilidad, flujo completo, combinado, experimentos e ideas pendientes
 ```
 
-## Empezar
-
-Abre [`notebooks/00_reproducir_base.ipynb`](notebooks/00_reproducir_base.ipynb) en Colab. En
-resumen:
-
-```python
-import os
-os.environ["P2M_DATOS"] = "/content/drive/MyDrive/poster2movie_datos"          # dataset compartido, solo lectura
-os.environ["P2M_SALIDAS"] = "/content/drive/MyDrive/poster2movie_clasificador" # carpeta del equipo
-```
-
-Dos carpetas de Drive, cada una con su papel:
-
-- `poster2movie_datos` (de Andrea, **solo lectura**): dataset, `metadata.parquet` y
-  `embeddings_clip_b32.npz`. Agrégala a *Mi unidad* como acceso directo.
-- `poster2movie_clasificador` (**compartida con edición a todo el equipo**): aquí van
-  `vectores/`, `modelos/` y `predicciones/`. Es la que conecta a las parejas: A deja los vectores
-  y B y C los leen; C lee las predicciones de todos. Agrégala también a *Mi unidad*.
-
-```bash
-git clone --recurse-submodules https://github.com/11909/Poster2Movie-Clasificador.git
-cd Poster2Movie-Clasificador
-pip install -r requirements.txt
-python -m clasificador.entrenar experimentos/base.yaml
-python -m clasificador.evaluar base
-```
-
-Si clonaste sin `--recurse-submodules`, corre `git submodule update --init`.
-
-## Cómo se hace un experimento
-
-1. Rama nueva: `git checkout -b B-focal-loss`.
-2. Copia `experimentos/base.yaml` a `experimentos/<pareja>_<idea>.yaml` (p. ej. `B_focal_g2.yaml`)
-   y cambia lo que pruebas. El campo `nombre` debe ser igual al nombre del archivo.
-3. `python -m clasificador.entrenar experimentos/B_focal_g2.yaml`
-4. `python -m clasificador.evaluar B_focal_g2` (en validación).
-5. `python -m clasificador.comparar base B_focal_g2`: los cuatro géneros débiles salen primero.
-6. Sube el `.yaml`, el código y `resultados/` en un Pull Request. Lo revisa alguien de **otra**
-   pareja. Aunque el experimento no mejore, se registra: explicar por qué no funcionó también cuenta.
-
-## Notebooks: trabajo en paralelo
-
-Un notebook por idea, para que cada quien trabaje en el suyo sin tocar el de otro (dos
-personas editando el mismo `.ipynb` dan conflictos casi imposibles de fusionar).
-
-| Notebook | Pareja · idea | Qué hace | Necesita | GPU |
-| --- | --- | --- | --- | --- |
-| `00_reproducir_base` | todos | Reproduce la base y publica `v0.1.0` (test debe dar F1 macro 0.537). **Una sola vez, antes que los demás** | nada | no |
-| `A1_multirecorte` | A · 1 | Vectores `clip_b32__relleno` y `clip_b32__3recortes` + su experimento | nada | sí |
-| `A2_ocr` | A · 2 | OCR en 2 mil carteles → `clip_b32__ocr` + experimento; si ayuda, todo el dataset | nada | sí |
-| `A7_codificadores` | A · 7a | Vectores `clip_l14__centro`, `siglip_base__centro` (opcionales: SigLIP so400m, DINOv2) | nada | sí |
-| `B3_cabezas` | B · 3 | Rejilla de MLP: capas, ancho, ReLU/GELU, dropout, LayerNorm, lr | vectores B/32 (ya existen) | no |
-| `B4_focal` | B · 4 | Focal Loss con γ = 1, 2 y 3 | vectores B/32 | no |
-| `B5_zeroshot` | B · 5 | Pistas `clip_b32__zeroshot` + experimento imagen + pistas | vectores B/32 | sí (una vez) |
-| `C6_apilamiento` | C · 6 | Predicciones fuera de pliegue, etapa 2 y mapa de calor 17 × 17 | cualquier experimento | no |
-| `C7_ensamble` | C · 7b | Una cabeza por codificador, promedio, umbrales; contra cada modelo solo y revisión de memoria | vectores de A7 (puede empezar con B/32 + variantes de A1) | no |
-| `C_release` | C | Comparar contra el último release, publicar y probar un cartel | lo que se publique | no |
-
-Orden: `00_reproducir_base` primero. Después todo puede ir en paralelo: B y C empiezan desde
-el día uno con los vectores B/32 que ya existen, y A es la única que necesita GPU de verdad
-(repartan el cómputo entre sus cuentas de Colab).
-
-Cómo están hechos:
-
-- **La lógica vive en `clasificador/*.py`, no en el notebook.** El notebook solo llama al código
-  (`!python -m clasificador...`), así lo que cambia se revisa en el Pull Request.
-- **Primera celda igual en todos:** monta Drive, define `P2M_DATOS` y `P2M_SALIDAS`, clona la
-  **rama de la idea** (`A-ocr`, `B-focal`...) e instala.
-- **Última celda: subir a la rama de la idea**, nunca a `main`. Luego se abre el Pull Request.
-  En Colab el repo se borra al cerrar: suban `resultados/` antes.
-- **Sin conflictos en el registro:** cada experimento guarda sus métricas solo en
-  `resultados/<nombre>/`, así dos Pull Requests nunca tocan el mismo archivo. La tabla de todos
-  (`resultados/registro.csv`) se arma sola al evaluar, o con `python -m clasificador.evaluar --registro`.
-- **Cada idea tiene su prueba** en `tests/test_pendientes.py`, marcada `xfail` (pendiente): hoy
-  `pytest -q` la muestra como `x`. Cuando la idea funciona, pytest avisa (XPASS) y se quita la
-  marca en el mismo Pull Request. Así `pytest -q -rxX` siempre dice qué falta.
-- **Lo pendiente avisa, nunca corre en silencio:** pedir `clip_l14`, `--variante ocr`, una cabeza
-  con `activacion: gelu` o `perdida: focal` antes de implementarlos da un error que dice qué
-  pareja lo hace y en qué archivo.
-
-Qué programa cada idea y con qué comando se corre:
-
-| Idea | Archivo | Comando |
-| --- | --- | --- |
-| A · 1 | `codificadores.py`: `recortes()` y variantes `relleno`, `3recortes` | `python -m clasificador.codificadores clip_b32 --variante relleno` |
-| A · 2 | `codificadores.py`: variante `ocr` | `python -m clasificador.codificadores clip_b32 --variante ocr --muestra 2000` |
-| A · 7a | `codificadores.py`: `clip_l14`, `siglip_base` (clase SigLIP) | `python -m clasificador.codificadores clip_l14` |
-| B · 3 | `cabezas.py`: `activacion: gelu`, `layernorm: true` | `python -m clasificador.entrenar experimentos/B3_<...>.yaml` |
-| B · 4 | `perdidas.py`: `{tipo: focal, gamma: 2}` | `python -m clasificador.entrenar experimentos/B4_focal_g2.yaml` |
-| B · 5 | `zeroshot.py` + variante `zeroshot` en `codificadores.py` | `python -m clasificador.zeroshot clip_b32` |
-| C · 6 | `apilamiento.py`: `pliegues`, `apilar` | `python -m clasificador.apilamiento C6_apilamiento base` |
-| C · 7b | `ensamble.py`: `alinear`, `ensamblar` | `python -m clasificador.ensamble C7_ensamble base A7_l14 A7_siglip` |
-
-Los `.yaml` de cada idea ya están en `experimentos/` como punto de partida (`A1_relleno`,
-`A2_ocr`, `A7_l14`, `B4_focal_g1`…); la rejilla de B3 los genera el notebook.
-
----
-
-## Contratos
-
-Formatos fijos para que las tres parejas trabajen en paralelo. Cambiarlos rompe el trabajo de
-otra pareja: solo cambian por acuerdo del equipo y se anotan en `CHANGELOG.md`.
-
-### Contrato 1 — Vectores (los produce A; los usan B y C)
-
-Un archivo por codificador y variante, en `<P2M_SALIDAS>/vectores/`:
-
-```
-<codificador>__<variante>.npz     ids: int64 (N,) id de TMDB · vectores: float32 (N, D)
-<codificador>__<variante>.json    nombre, codificador, variante, modelo_hf, dim, peliculas, fecha
-```
-
-- Nombres: `clip_b32__centro`, `clip_l14__centro`, `siglip_base__3recortes`, `clip_b32__ocr`,
-  `clip_b32__zeroshot`... Doble guion bajo entre codificador y variante.
-- `clip_b32__centro` ya existe: son los `embeddings_clip_b32.npz` del dataset compartido.
-- Se generan con `python -m clasificador.codificadores <codificador> --variante <variante>`.
-- La **misma clase** que genera el archivo es la que usa `predictor.py`, para que el cartel se
-  procese igual al entrenar y al predecir. Toda clase nueva hereda de `Codificador`
-  (`nombre`, `modelo_hf`, `dim`, `codificar(imagenes) -> ndarray`) y se registra en
-  `crear_codificador`.
-- Las pistas zero-shot y el texto OCR también son archivos de este contrato (vectores de N × 17
-  o N × 512), así se combinan con cualquier otro.
-
-### Contrato 2 — Experimento (lo usan todos)
-
-Un `.yaml` en `experimentos/`:
-
-```yaml
-nombre: B_focal_g2      # = nombre del archivo
-pareja: B               # A, B, C o base
-descripcion: Focal Loss con gamma 2 sobre la base.
-vectores:               # uno o varios del contrato 1; varios se concatenan por id
-  - clip_b32__centro
-cabeza: {tipo: lineal}  # lineal | mlp (ocultas, dropout) | ...
-perdida: {tipo: focal, gamma: 2}
-entrenamiento: {epocas: 200, tasa: 0.001, paciencia: 10, lote: 256, weight_decay: 0.0001, semilla: 42}
-```
-
-`python -m clasificador.entrenar experimentos/<nombre>.yaml` produce:
-
-- `<P2M_SALIDAS>/modelos/<nombre>.pt` con las claves del `.pt` del repo principal
-  (`modelo_clip`, `embeddings`, `arquitectura`, `generos`, `capa`, `umbrales`) más `vectores`,
-  `experimento` y `commit`.
-- `<P2M_SALIDAS>/predicciones/<nombre>.npz` con `ids_val` y `prob_val` (N × 17): lo que usan el
-  ensamble y el apilamiento.
-
-Un tipo nuevo de cabeza o de pérdida se agrega en `cabezas.py` o `perdidas.py` y se documenta aquí.
-
-### Contrato 3 — Métricas (lo usan todos)
-
-`python -m clasificador.evaluar <nombre>` escribe en `resultados/<nombre>/`:
-
-- `metricas_val.json`: F1 macro, F1 micro, F1 por película, mAP, acierto exacto, F1 de los
-  cuatro géneros débiles y la línea base trivial.
-- `por_genero_val.csv`: `genero, genero_es, peliculas, precision, recall, F1, umbral`.
-- `registro_val.csv`: una fila por evaluación (fecha, nombre, pareja, split, F1 macro, F1 micro,
-  mAP, F1 de los cuatro débiles, vectores, commit).
-
-Luego vuelve a armar `resultados/registro.csv` juntando los `registro_*.csv` de todos los
-experimentos, por fecha. Esa es la tabla "base contra cada intento" del reporte. No va en git
-(se arma, no se edita): así los Pull Requests de cada pareja no chocan.
-`python -m clasificador.evaluar --registro` la arma sin evaluar nada.
-
-**Test no se usa para elegir.** `evaluar` se niega a medir test fuera de un release.
-
-### Contrato 4 — Modelo combinado: ensamble y apilamiento (lo produce C; lo usan todos)
-
-Junta las cabezas de varios experimentos **ya entrenados** (los *miembros*), promedia sus 17
-probabilidades con pesos, opcionalmente las corrige con una etapa 2 (apilamiento) y aplica sus
-propios umbrales. Se arma con `clasificador.combinado.armar(...)` y se guarda con
-`combinado.guardar(...)` en `<P2M_SALIDAS>/modelos/<nombre>.pt`:
-
-```python
-{
-  "tipo": "combinado",
-  "generos": [...17...],
-  "miembros": [                       # uno por experimento, sacado de su .pt (contrato 2)
-    {"nombre": "base",     "vectores": ["clip_b32__centro"], "arquitectura": {...}, "capa": {...}},
-    {"nombre": "A_l14",    "vectores": ["clip_l14__centro"], "arquitectura": {...}, "capa": {...}},
-  ],
-  "pesos": [0.5, 0.5],                # suman 1 (armar los normaliza)
-  "apilamiento": None,                # o {"arquitectura": {...}, "capa": {...}, "residual": True}
-  "umbrales": [...17...],             # calibrados en val sobre la salida FINAL
-  "vectores": [...],                  # todos los archivos que usa (informativo)
-  "experimento": {...}, "commit": "..."
-}
-```
-
-- **Ensamble (7b):** varios miembros, `apilamiento: None`.
-- **Apilamiento (6):** la etapa 2 recibe las 17 probabilidades promediadas. Con `residual: True`
-  (recomendado) su salida se suma al logit del promedio: solo ajusta lo que ya había. Sobre un
-  solo modelo = un miembro con peso 1.
-- **Cómo combinar está definido en un solo lugar** (`combinado.probabilidades`): lo usan
-  `evaluar` (con vectores) y `predictor` (con carteles), así dan lo mismo. Un `.pt` normal se
-  predice como un combinado de un miembro.
-- Un combinado se evalúa, compara y publica como cualquier experimento
-  (`python -m clasificador.evaluar C_ensamble`).
-- El predictor crea **un codificador por archivo de vectores**, compartido entre miembros, y un
-  solo CLIP por modelo aunque lo usen varias variantes: revisen la memoria de la T4 (si no cabe,
-  publiquen también una versión ligera).
-
----
-
-## Versiones y releases
-
-`vMAYOR.MENOR.PARCHE`:
-
-- **PARCHE** (`v0.2.1`): se arregla un error sin cambiar el modelo ni sus métricas.
-- **MENOR** (`v0.3.0`): un modelo nuevo que mejora en validación.
-- **MAYOR** (`v1.0.0`): la versión que se entrega al repo principal.
-
-Se publica cuando el F1 macro en validación no baja y el promedio de los cuatro géneros débiles
-sube:
-
-```bash
-git checkout -b release-v0.2.0
-python -m clasificador.release v0.2.0 B4_focal_g2 --notas "Focal Loss gamma 2: +0.04 en Misterio"
-git add releases/v0.2.0 resultados && git commit -m "Release v0.2.0"
-git push origin release-v0.2.0          # Pull Request; al fusionarlo, en main:
-git tag v0.2.0 && git push origin v0.2.0
-```
-
-(El notebook `C_release` hace lo mismo desde Colab.) `release.py` mide en val y test, copia el
-`.pt`, las métricas y la receta a `releases/v0.2.0/`, y escribe `LEEME.md` con la comparación
-contra el release anterior. Al subir la etiqueta, GitHub Actions crea el release con esos archivos. Un release no se reescribe: si algo salió mal, se
-publica el siguiente número.
+En Drive, `poster2movie_clasificador/` (`P2M_SALIDAS`) guarda lo pesado, que no va en git:
+`vectores/`, `modelos/` y `predicciones/`.
 
 ## Reglas
 
 1. No se cambian el split ni los géneros: vienen del submódulo, y `tests/test_compatibilidad.py`
    falla si cambian. El submódulo solo se actualiza por acuerdo del equipo.
 2. La interfaz `Clasificador().predecir(imagen)` no cambia: la usan la demo y los otros módulos.
-3. Los modelos se eligen con validación. Test solo en releases.
+3. Los modelos se eligen con **validación**. Test solo en releases.
 4. Nada se sube directo a `main`: rama + Pull Request revisado por otra pareja. Las pruebas
    corren solas en cada PR.
-
-## Entrega al repo principal
-
-Al final se abre un PR al repo principal con el `predictor.py` final como `p2m/clasificador.py`
-(o el paquete completo) y el `.pt` de `v1.0.0`. Los `.pt` de aquí ya tienen las claves que espera
-el evaluador del repo principal.
+5. Los contratos ([docs/CONTRATOS.md](docs/CONTRATOS.md)) solo cambian por acuerdo del equipo y se
+   anotan en `CHANGELOG.md`.
+6. Se publica un release cuando el F1 macro en validación no baja y el promedio de los 4 débiles sube.
