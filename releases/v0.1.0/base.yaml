@@ -1,0 +1,22 @@
+# Sistema base del repo principal: CLIP ViT-B/32 congelado + capa lineal + umbral por género.
+# Sirve para comprobar que este repo reproduce la base (F1 macro 0.537 en test) y como plantilla.
+nombre: base            # igual al nombre del archivo
+pareja: base            # A, B, C o base
+descripcion: Sistema base del repo principal, reproducido.
+
+vectores:               # uno o varios archivos del contrato 1; si son varios, se concatenan
+  - clip_b32__centro
+
+cabeza:
+  tipo: lineal          # lineal | mlp (con ocultas: [512, 256] y dropout: 0.2)
+
+perdida:
+  tipo: bce             # bce | focal (pendiente)
+
+entrenamiento:
+  epocas: 200
+  tasa: 0.001
+  paciencia: 10
+  lote: 256
+  weight_decay: 0.0001
+  semilla: 42

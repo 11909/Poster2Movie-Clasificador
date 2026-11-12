@@ -1,0 +1,18 @@
+genero,genero_es,peliculas,precision,recall,F1,umbral
+Action,Acción,1134,0.6111,0.6914,0.6487,0.6600
+Adventure,Aventura,507,0.3916,0.4990,0.4389,0.7700
+Animation,Animación,482,0.9134,0.8755,0.8941,0.8600
+Comedy,Comedia,1857,0.6482,0.7631,0.7010,0.5200
+Crime,Crimen,700,0.3559,0.5557,0.4339,0.6400
+Documentary,Documental,280,0.3088,0.6143,0.4110,0.7500
+Drama,Drama,2783,0.6253,0.8545,0.7221,0.3800
+Family,Familia,489,0.5383,0.6605,0.5932,0.7700
+Fantasy,Fantasía,409,0.3888,0.4059,0.3971,0.8300
+History,Historia,233,0.3557,0.4549,0.3992,0.8300
+Horror,Terror,699,0.6300,0.6724,0.6505,0.7600
+Mystery,Misterio,380,0.2233,0.4789,0.3046,0.6800
+Romance,Romance,949,0.5317,0.5743,0.5522,0.7000
+Science Fiction,Ciencia ficción,514,0.5824,0.6051,0.5935,0.8000
+Thriller,Thriller,1100,0.4945,0.6582,0.5647,0.6200
+War,Guerra,163,0.5682,0.3067,0.3984,0.9500
+Western,Western,76,0.5467,0.5395,0.5430,0.9400
