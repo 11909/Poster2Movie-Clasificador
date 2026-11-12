@@ -18,6 +18,7 @@ Uso:
 import argparse
 import json
 from datetime import datetime, timezone
+from functools import lru_cache
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -32,6 +33,15 @@ CODIFICADORES = {
 }
 VARIANTES = ["centro"]
 DISPOSITIVO = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+@lru_cache(maxsize=None)
+def cargar_clip(modelo_hf: str):
+    """(procesador, modelo) de CLIP, UNA vez por modelo: si varias variantes o varios miembros
+    de un ensamble usan el mismo CLIP, comparten la memoria (la demo corre en una T4)."""
+    from transformers import CLIPModel, CLIPProcessor  # aquí, para que las pruebas no lo necesiten
+
+    return CLIPProcessor.from_pretrained(modelo_hf), CLIPModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
 
 
 class Codificador:
@@ -52,12 +62,9 @@ class CodificadorCLIP(Codificador):
     def __init__(self, codificador: str = "clip_b32", variante: str = "centro"):
         if variante != "centro":
             raise NotImplementedError(f"Variante '{variante}': pendiente de la Pareja A.")
-        from transformers import CLIPModel, CLIPProcessor  # aquí, para que las pruebas no lo necesiten
-
         self.nombre = f"{codificador}__{variante}"
         self.modelo_hf = CODIFICADORES[codificador]
-        self.procesador = CLIPProcessor.from_pretrained(self.modelo_hf)
-        self.modelo = CLIPModel.from_pretrained(self.modelo_hf).to(DISPOSITIVO).eval()
+        self.procesador, self.modelo = cargar_clip(self.modelo_hf)
         self.dim = self.modelo.config.projection_dim
 
     @torch.inference_mode()

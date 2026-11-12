@@ -183,6 +183,42 @@ experimentos, por fecha. Esa es la tabla "base contra cada intento" del reporte.
 
 **Test no se usa para elegir.** `evaluar` se niega a medir test fuera de un release.
 
+### Contrato 4 — Modelo combinado: ensamble y apilamiento (lo produce C; lo usan todos)
+
+Junta las cabezas de varios experimentos **ya entrenados** (los *miembros*), promedia sus 17
+probabilidades con pesos, opcionalmente las corrige con una etapa 2 (apilamiento) y aplica sus
+propios umbrales. Se arma con `clasificador.combinado.armar(...)` y se guarda con
+`combinado.guardar(...)` en `<P2M_SALIDAS>/modelos/<nombre>.pt`:
+
+```python
+{
+  "tipo": "combinado",
+  "generos": [...17...],
+  "miembros": [                       # uno por experimento, sacado de su .pt (contrato 2)
+    {"nombre": "base",     "vectores": ["clip_b32__centro"], "arquitectura": {...}, "capa": {...}},
+    {"nombre": "A_l14",    "vectores": ["clip_l14__centro"], "arquitectura": {...}, "capa": {...}},
+  ],
+  "pesos": [0.5, 0.5],                # suman 1 (armar los normaliza)
+  "apilamiento": None,                # o {"arquitectura": {...}, "capa": {...}, "residual": True}
+  "umbrales": [...17...],             # calibrados en val sobre la salida FINAL
+  "vectores": [...],                  # todos los archivos que usa (informativo)
+  "experimento": {...}, "commit": "..."
+}
+```
+
+- **Ensamble (7b):** varios miembros, `apilamiento: None`.
+- **Apilamiento (6):** la etapa 2 recibe las 17 probabilidades promediadas. Con `residual: True`
+  (recomendado) su salida se suma al logit del promedio: solo ajusta lo que ya había. Sobre un
+  solo modelo = un miembro con peso 1.
+- **Cómo combinar está definido en un solo lugar** (`combinado.probabilidades`): lo usan
+  `evaluar` (con vectores) y `predictor` (con carteles), así dan lo mismo. Un `.pt` normal se
+  predice como un combinado de un miembro.
+- Un combinado se evalúa, compara y publica como cualquier experimento
+  (`python -m clasificador.evaluar C_ensamble`).
+- El predictor crea **un codificador por archivo de vectores**, compartido entre miembros, y un
+  solo CLIP por modelo aunque lo usen varias variantes: revisen la memoria de la T4 (si no cabe,
+  publiquen también una versión ligera).
+
 ---
 
 ## Versiones y releases

@@ -28,9 +28,10 @@ import pandas as pd
 import torch
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_recall_fscore_support
 
-from clasificador import rutas
+from clasificador import combinado, rutas
 from clasificador.cabezas import cargar_cabeza
-from clasificador.datos import GENEROS, GENEROS_DEBILES, aplicar_umbrales, cargar_split
+from clasificador.combinado import es_combinado
+from clasificador.datos import GENEROS, GENEROS_DEBILES, aplicar_umbrales, cargar_split, cargar_split_por_archivo
 from clasificador.entrenar import commit_actual
 from p2m import config
 
@@ -48,6 +49,19 @@ def metricas(y: np.ndarray, prediccion: np.ndarray, probabilidades: np.ndarray |
     }
 
 
+def probabilidades_split(guardado: dict, split: str) -> tuple[np.ndarray, np.ndarray]:
+    """(probabilidades n × 17, etiquetas) de un split, con los vectores precalculados.
+    Sirve para un .pt normal (contrato 2) y para uno combinado (contrato 4)."""
+    if es_combinado(guardado):
+        xs, y, _ = cargar_split_por_archivo(split, guardado["vectores"])
+        cabezas = combinado.cargar_cabezas(guardado, {v: x.shape[1] for v, x in xs.items()})
+        return combinado.probabilidades(guardado, cabezas, combinado.cargar_etapa2(guardado), xs), y
+    x, y, _ = cargar_split(split, guardado.get("vectores") or ["clip_b32__centro"])
+    cabeza = cargar_cabeza(guardado, x.shape[1])
+    with torch.no_grad():
+        return torch.sigmoid(cabeza(torch.tensor(x))).numpy(), y
+
+
 def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) -> dict:
     if split == "test" and not para_release:
         raise SystemExit("Test solo se mide al publicar un release: usa `python -m clasificador.release`. "
@@ -57,13 +71,11 @@ def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) 
     nombre = experimento.get("nombre", str(nombre_o_ruta))
     vectores = guardado.get("vectores") or ["clip_b32__centro"]  # un .pt del repo principal
 
-    x, y, _ = cargar_split(split, vectores)
-    cabeza = cargar_cabeza(guardado, x.shape[1])
-    with torch.no_grad():
-        prob = torch.sigmoid(cabeza(torch.tensor(x))).numpy()
+    prob, y = probabilidades_split(guardado, split)
     prediccion = aplicar_umbrales(prob, np.asarray(guardado["umbrales"]))
 
-    _, y_train, _ = cargar_split("train", vectores)
+    # para la línea base trivial; en un combinado, con los vectores de su primer miembro
+    _, y_train, _ = cargar_split("train", guardado["miembros"][0]["vectores"] if es_combinado(guardado) else vectores)
     comunes = np.argsort(-y_train.sum(axis=0))[:2]
     trivial = np.zeros_like(y)
     trivial[:, comunes] = 1
