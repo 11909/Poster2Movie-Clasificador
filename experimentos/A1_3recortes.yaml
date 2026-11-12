@@ -1,0 +1,7 @@
+nombre: A1_3recortes
+pareja: A
+descripcion: "Idea 1: arriba, centro y abajo."
+vectores:
+  - clip_b32__3recortes
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

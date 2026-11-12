@@ -1,0 +1,7 @@
+nombre: A7_siglip
+pareja: A
+descripcion: "Idea 7a: SigLIP base (768)."
+vectores:
+  - siglip_base__centro
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

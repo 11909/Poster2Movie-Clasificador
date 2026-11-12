@@ -1,0 +1,7 @@
+nombre: A1_relleno
+pareja: A
+descripcion: "Idea 1: cartel completo con relleno a cuadrado."
+vectores:
+  - clip_b32__relleno
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

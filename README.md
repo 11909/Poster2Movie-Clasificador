@@ -113,6 +113,28 @@ Cómo están hechos:
 - **Sin conflictos en el registro:** cada experimento guarda sus métricas solo en
   `resultados/<nombre>/`, así dos Pull Requests nunca tocan el mismo archivo. La tabla de todos
   (`resultados/registro.csv`) se arma sola al evaluar, o con `python -m clasificador.evaluar --registro`.
+- **Cada idea tiene su prueba** en `tests/test_pendientes.py`, marcada `xfail` (pendiente): hoy
+  `pytest -q` la muestra como `x`. Cuando la idea funciona, pytest avisa (XPASS) y se quita la
+  marca en el mismo Pull Request. Así `pytest -q -rxX` siempre dice qué falta.
+- **Lo pendiente avisa, nunca corre en silencio:** pedir `clip_l14`, `--variante ocr`, una cabeza
+  con `activacion: gelu` o `perdida: focal` antes de implementarlos da un error que dice qué
+  pareja lo hace y en qué archivo.
+
+Qué programa cada idea y con qué comando se corre:
+
+| Idea | Archivo | Comando |
+| --- | --- | --- |
+| A · 1 | `codificadores.py`: `recortes()` y variantes `relleno`, `3recortes` | `python -m clasificador.codificadores clip_b32 --variante relleno` |
+| A · 2 | `codificadores.py`: variante `ocr` | `python -m clasificador.codificadores clip_b32 --variante ocr --muestra 2000` |
+| A · 7a | `codificadores.py`: `clip_l14`, `siglip_base` (clase SigLIP) | `python -m clasificador.codificadores clip_l14` |
+| B · 3 | `cabezas.py`: `activacion: gelu`, `layernorm: true` | `python -m clasificador.entrenar experimentos/B3_<...>.yaml` |
+| B · 4 | `perdidas.py`: `{tipo: focal, gamma: 2}` | `python -m clasificador.entrenar experimentos/B4_focal_g2.yaml` |
+| B · 5 | `zeroshot.py` + variante `zeroshot` en `codificadores.py` | `python -m clasificador.zeroshot clip_b32` |
+| C · 6 | `apilamiento.py`: `pliegues`, `apilar` | `python -m clasificador.apilamiento C6_apilamiento base` |
+| C · 7b | `ensamble.py`: `alinear`, `ensamblar` | `python -m clasificador.ensamble C7_ensamble base A7_l14 A7_siglip` |
+
+Los `.yaml` de cada idea ya están en `experimentos/` como punto de partida (`A1_relleno`,
+`A2_ocr`, `A7_l14`, `B4_focal_g1`…); la rejilla de B3 los genera el notebook.
 
 ---
 
@@ -233,14 +255,16 @@ Se publica cuando el F1 macro en validación no baja y el promedio de los cuatro
 sube:
 
 ```bash
-python -m clasificador.release v0.2.0 B_focal_g2 --notas "Focal Loss gamma 2: +0.04 en Misterio"
+git checkout -b release-v0.2.0
+python -m clasificador.release v0.2.0 B4_focal_g2 --notas "Focal Loss gamma 2: +0.04 en Misterio"
 git add releases/v0.2.0 resultados && git commit -m "Release v0.2.0"
-git tag v0.2.0 && git push && git push --tags
+git push origin release-v0.2.0          # Pull Request; al fusionarlo, en main:
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
-`release.py` mide en val y test, copia el `.pt`, las métricas y la receta a `releases/v0.2.0/`, y
-escribe `LEEME.md` con la comparación contra el release anterior. Al subir la etiqueta, GitHub
-Actions crea el release con esos archivos. Un release no se reescribe: si algo salió mal, se
+(El notebook `C_release` hace lo mismo desde Colab.) `release.py` mide en val y test, copia el
+`.pt`, las métricas y la receta a `releases/v0.2.0/`, y escribe `LEEME.md` con la comparación
+contra el release anterior. Al subir la etiqueta, GitHub Actions crea el release con esos archivos. Un release no se reescribe: si algo salió mal, se
 publica el siguiente número.
 
 ## Reglas
