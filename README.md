@@ -33,15 +33,16 @@ clasificador/
 ├── predictor.py         Clasificador().predecir(), misma interfaz que el repo principal
 ├── datos.py, rutas.py   lectura de vectores y etiquetas, carpetas
 experimentos/            un .yaml por experimento
-resultados/              métricas de cada experimento + registro.csv (sí van en git)
+resultados/              una carpeta por experimento con sus métricas (sí van en git);
+                         registro.csv se arma con ellas (no va en git)
 releases/                una carpeta por release (sí van en git, .pt incluido)
-notebooks/               Colab
+notebooks/               Colab: uno por idea (ver "Notebooks: trabajo en paralelo")
 tests/                   compatibilidad con el repo principal y flujo completo
 ```
 
 ## Empezar
 
-Abre [`notebooks/01_reproducir_base.ipynb`](notebooks/01_reproducir_base.ipynb) en Colab. En
+Abre [`notebooks/00_reproducir_base.ipynb`](notebooks/00_reproducir_base.ipynb) en Colab. En
 resumen:
 
 ```python
@@ -49,6 +50,14 @@ import os
 os.environ["P2M_DATOS"] = "/content/drive/MyDrive/poster2movie_datos"          # dataset compartido, solo lectura
 os.environ["P2M_SALIDAS"] = "/content/drive/MyDrive/poster2movie_clasificador" # carpeta del equipo
 ```
+
+Dos carpetas de Drive, cada una con su papel:
+
+- `poster2movie_datos` (de Andrea, **solo lectura**): dataset, `metadata.parquet` y
+  `embeddings_clip_b32.npz`. Agrégala a *Mi unidad* como acceso directo.
+- `poster2movie_clasificador` (**compartida con edición a todo el equipo**): aquí van
+  `vectores/`, `modelos/` y `predicciones/`. Es la que conecta a las parejas: A deja los vectores
+  y B y C los leen; C lee las predicciones de todos. Agrégala también a *Mi unidad*.
 
 ```bash
 git clone --recurse-submodules https://github.com/11909/Poster2Movie-Clasificador.git
@@ -70,6 +79,40 @@ Si clonaste sin `--recurse-submodules`, corre `git submodule update --init`.
 5. `python -m clasificador.comparar base B_focal_g2`: los cuatro géneros débiles salen primero.
 6. Sube el `.yaml`, el código y `resultados/` en un Pull Request. Lo revisa alguien de **otra**
    pareja. Aunque el experimento no mejore, se registra: explicar por qué no funcionó también cuenta.
+
+## Notebooks: trabajo en paralelo
+
+Un notebook por idea, para que cada quien trabaje en el suyo sin tocar el de otro (dos
+personas editando el mismo `.ipynb` dan conflictos casi imposibles de fusionar).
+
+| Notebook | Pareja · idea | Qué hace | Necesita | GPU |
+| --- | --- | --- | --- | --- |
+| `00_reproducir_base` | todos | Reproduce la base y publica `v0.1.0` (test debe dar F1 macro 0.537). **Una sola vez, antes que los demás** | nada | no |
+| `A1_multirecorte` | A · 1 | Vectores `clip_b32__relleno` y `clip_b32__3recortes` + su experimento | nada | sí |
+| `A2_ocr` | A · 2 | OCR en 2 mil carteles → `clip_b32__ocr` + experimento; si ayuda, todo el dataset | nada | sí |
+| `A7_codificadores` | A · 7a | Vectores `clip_l14__centro`, `siglip_base__centro` (opcionales: SigLIP so400m, DINOv2) | nada | sí |
+| `B3_cabezas` | B · 3 | Rejilla de MLP: capas, ancho, ReLU/GELU, dropout, LayerNorm, lr | vectores B/32 (ya existen) | no |
+| `B4_focal` | B · 4 | Focal Loss con γ = 1, 2 y 3 | vectores B/32 | no |
+| `B5_zeroshot` | B · 5 | Pistas `clip_b32__zeroshot` + experimento imagen + pistas | vectores B/32 | sí (una vez) |
+| `C6_apilamiento` | C · 6 | Predicciones fuera de pliegue, etapa 2 y mapa de calor 17 × 17 | cualquier experimento | no |
+| `C7_ensamble` | C · 7b | Una cabeza por codificador, promedio, umbrales; contra cada modelo solo y revisión de memoria | vectores de A7 (puede empezar con B/32 + variantes de A1) | no |
+| `C_release` | C | Comparar contra el último release, publicar y probar un cartel | lo que se publique | no |
+
+Orden: `00_reproducir_base` primero. Después todo puede ir en paralelo: B y C empiezan desde
+el día uno con los vectores B/32 que ya existen, y A es la única que necesita GPU de verdad
+(repartan el cómputo entre sus cuentas de Colab).
+
+Cómo están hechos:
+
+- **La lógica vive en `clasificador/*.py`, no en el notebook.** El notebook solo llama al código
+  (`!python -m clasificador...`), así lo que cambia se revisa en el Pull Request.
+- **Primera celda igual en todos:** monta Drive, define `P2M_DATOS` y `P2M_SALIDAS`, clona la
+  **rama de la idea** (`A-ocr`, `B-focal`...) e instala.
+- **Última celda: subir a la rama de la idea**, nunca a `main`. Luego se abre el Pull Request.
+  En Colab el repo se borra al cerrar: suban `resultados/` antes.
+- **Sin conflictos en el registro:** cada experimento guarda sus métricas solo en
+  `resultados/<nombre>/`, así dos Pull Requests nunca tocan el mismo archivo. La tabla de todos
+  (`resultados/registro.csv`) se arma sola al evaluar, o con `python -m clasificador.evaluar --registro`.
 
 ---
 
@@ -130,10 +173,13 @@ Un tipo nuevo de cabeza o de pérdida se agrega en `cabezas.py` o `perdidas.py` 
 - `metricas_val.json`: F1 macro, F1 micro, F1 por película, mAP, acierto exacto, F1 de los
   cuatro géneros débiles y la línea base trivial.
 - `por_genero_val.csv`: `genero, genero_es, peliculas, precision, recall, F1, umbral`.
+- `registro_val.csv`: una fila por evaluación (fecha, nombre, pareja, split, F1 macro, F1 micro,
+  mAP, F1 de los cuatro débiles, vectores, commit).
 
-Y agrega una fila a `resultados/registro.csv` (fecha, nombre, pareja, split, F1 macro, F1 micro,
-mAP, F1 de los cuatro débiles, vectores, commit). Ese archivo es la tabla "base contra cada
-intento" del reporte.
+Luego vuelve a armar `resultados/registro.csv` juntando los `registro_*.csv` de todos los
+experimentos, por fecha. Esa es la tabla "base contra cada intento" del reporte. No va en git
+(se arma, no se edita): así los Pull Requests de cada pareja no chocan.
+`python -m clasificador.evaluar --registro` la arma sin evaluar nada.
 
 **Test no se usa para elegir.** `evaluar` se niega a medir test fuera de un release.
 
