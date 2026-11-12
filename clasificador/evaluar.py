@@ -8,7 +8,11 @@ Escribe en `resultados/<nombre>/`:
   y la línea base trivial (siempre los 2 géneros más comunes).
 - `por_genero_<split>.csv`: precisión, recall, F1 y umbral de cada género.
 
-Y agrega una fila a `resultados/registro.csv`.
+- `registro_<split>.csv`: una fila por evaluación (fecha, métricas, vectores, commit).
+
+Y vuelve a armar `resultados/registro.csv` con las filas de todos los experimentos
+(`python -m clasificador.evaluar --registro` lo arma sin evaluar). registro.csv no va en
+git: cada Pull Request solo trae la carpeta de su experimento, así no chocan.
 
 Test solo se mide al publicar un release (`python -m clasificador.release`). Si elegimos
 modelos mirando test, los números finales salen inflados.
@@ -92,9 +96,12 @@ def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) 
 
 
 def registrar(resultado: dict) -> None:
-    rutas.REGISTRO.parent.mkdir(parents=True, exist_ok=True)
-    nuevo = not rutas.REGISTRO.exists() or rutas.REGISTRO.stat().st_size == 0
-    with open(rutas.REGISTRO, "a", newline="", encoding="utf-8") as archivo:
+    """Agrega la fila a `resultados/<nombre>/registro_<split>.csv` (solo de este experimento:
+    dos Pull Requests nunca tocan el mismo archivo) y vuelve a armar `registro.csv`."""
+    propio = rutas.RESULTADOS / resultado["nombre"] / f"registro_{resultado['split']}.csv"
+    propio.parent.mkdir(parents=True, exist_ok=True)
+    nuevo = not propio.exists() or propio.stat().st_size == 0
+    with open(propio, "a", newline="", encoding="utf-8") as archivo:
         escritor = csv.DictWriter(archivo, fieldnames=COLUMNAS_REGISTRO)
         if nuevo:
             escritor.writeheader()
@@ -106,12 +113,31 @@ def registrar(resultado: dict) -> None:
             **{f"F1_{g}": f"{v:.4f}" for g, v in resultado["F1_debiles"].items()},
             "vectores": "+".join(resultado["vectores"]), "commit": commit_actual(),
         })
+    armar_registro()
+
+
+def armar_registro() -> pd.DataFrame:
+    """`resultados/registro.csv` = las filas de todos los experimentos, por fecha. Es la tabla
+    "base contra cada intento" del reporte. Se arma, no se edita, y no va en git."""
+    partes = [pd.read_csv(a, dtype=str) for a in sorted(rutas.RESULTADOS.glob("*/registro_*.csv"))]
+    tabla = (pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=COLUMNAS_REGISTRO))
+    tabla = tabla.reindex(columns=COLUMNAS_REGISTRO).sort_values("fecha", kind="stable")
+    rutas.REGISTRO.parent.mkdir(parents=True, exist_ok=True)
+    tabla.to_csv(rutas.REGISTRO, index=False)
+    return tabla
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("modelo", help="nombre del experimento (busca <P2M_SALIDAS>/modelos/<nombre>.pt) o ruta a un .pt")
+    parser.add_argument("modelo", nargs="?",
+                        help="nombre del experimento (busca <P2M_SALIDAS>/modelos/<nombre>.pt) o ruta a un .pt")
     parser.add_argument("--split", default="val", choices=["val", "test"])
+    parser.add_argument("--registro", action="store_true", help="solo vuelve a armar resultados/registro.csv")
     parser.add_argument("--para-release", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    evaluar(args.modelo, args.split, args.para_release)
+    if args.registro:
+        print(armar_registro().to_string(index=False))
+    elif args.modelo:
+        evaluar(args.modelo, args.split, args.para_release)
+    else:
+        parser.error("falta el modelo (o usa --registro)")

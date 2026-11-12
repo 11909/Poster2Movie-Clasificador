@@ -67,8 +67,14 @@ def test_flujo_completo(entorno):
     assert resultado["F1_macro"] > resultado["trivial"]["F1_macro"]
     evaluar("B_mlp", "val")
 
+    # cada experimento escribe solo en su carpeta; registro.csv junta las filas de todos
+    for nombre in ("base", "B_mlp"):
+        assert len(pd.read_csv(entorno / "resultados" / nombre / "registro_val.csv")) == 1
     registro = pd.read_csv(entorno / "resultados" / "registro.csv")
-    assert list(registro["nombre"]) == ["base", "B_mlp"]
+    assert sorted(registro["nombre"]) == ["B_mlp", "base"]
+    evaluar("base", "val")  # volver a evaluar agrega otra fila, en su propio archivo
+    assert len(pd.read_csv(entorno / "resultados" / "base" / "registro_val.csv")) == 2
+    assert len(pd.read_csv(entorno / "resultados" / "registro.csv")) == 3
 
     with pytest.raises(SystemExit):
         evaluar("base", "test")  # test solo en releases
