@@ -18,25 +18,34 @@ def cargar_vectores(nombre: str) -> tuple[np.ndarray, np.ndarray]:
     return guardado["ids"].astype(np.int64), guardado["vectores"].astype(np.float32)
 
 
+def cargar_split_por_archivo(split: str, vectores: list[str] | str) -> tuple[dict[str, np.ndarray], np.ndarray, list[int]]:
+    """({archivo: x}, y, ids) de un split, con las filas alineadas entre archivos.
+    Solo entran las películas que están en TODOS los archivos."""
+    if isinstance(vectores, str):
+        vectores = [vectores]
+    tablas = {}  # archivo -> (fila de cada id, matriz de vectores)
+    for nombre in dict.fromkeys(vectores):
+        ids, x = cargar_vectores(nombre)
+        tablas[nombre] = ({int(i): n for n, i in enumerate(ids)}, x)
+
+    meta = datos.metadata(split)
+    comunes = set(meta["id"])
+    for fila_de, _ in tablas.values():
+        comunes &= fila_de.keys()
+    meta = meta[meta["id"].isin(comunes)]
+
+    xs = {nombre: x[[fila_de[i] for i in meta["id"]]] for nombre, (fila_de, x) in tablas.items()}
+    y = np.array([datos.vector_generos(list(g)) for g in meta["generos"]], dtype=np.int64)
+    return xs, y, meta["id"].tolist()
+
+
 def cargar_split(split: str, vectores: list[str] | str) -> tuple[np.ndarray, np.ndarray, list[int]]:
     """(x, y, ids) de un split. `x` concatena los vectores de cada archivo, en el orden dado.
     Solo entran las películas que están en TODOS los archivos."""
     if isinstance(vectores, str):
         vectores = [vectores]
-    tablas = []  # (fila de cada id, matriz de vectores) por archivo
-    for nombre in vectores:
-        ids, x = cargar_vectores(nombre)
-        tablas.append(({int(i): n for n, i in enumerate(ids)}, x))
-
-    meta = datos.metadata(split)
-    comunes = set(meta["id"])
-    for fila_de, _ in tablas:
-        comunes &= fila_de.keys()
-    meta = meta[meta["id"].isin(comunes)]
-
-    x = np.concatenate([x[[fila_de[i] for i in meta["id"]]] for fila_de, x in tablas], axis=1)
-    y = np.array([datos.vector_generos(list(g)) for g in meta["generos"]], dtype=np.int64)
-    return x, y, meta["id"].tolist()
+    xs, y, ids = cargar_split_por_archivo(split, vectores)
+    return np.concatenate([xs[v] for v in vectores], axis=1), y, ids
 
 
 def calibrar_umbrales(y: np.ndarray, probabilidades: np.ndarray) -> np.ndarray:

@@ -1,0 +1,7 @@
+nombre: B4_focal_g3
+pareja: B
+descripcion: "Idea 4: Focal Loss con gamma 3."
+vectores:
+  - clip_b32__centro
+cabeza: {tipo: lineal}
+perdida: {tipo: focal, gamma: 3}

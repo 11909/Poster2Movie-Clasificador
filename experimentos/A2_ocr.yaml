@@ -1,0 +1,8 @@
+nombre: A2_ocr
+pareja: A
+descripcion: "Idea 2: imagen + texto del cartel (OCR) con el codificador de texto de CLIP."
+vectores:
+  - clip_b32__centro
+  - clip_b32__ocr
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

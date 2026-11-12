@@ -1,0 +1,8 @@
+nombre: B5_zeroshot
+pareja: B
+descripcion: "Idea 5: imagen + 17 pistas zero-shot."
+vectores:
+  - clip_b32__centro
+  - clip_b32__zeroshot
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

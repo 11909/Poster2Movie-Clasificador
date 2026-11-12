@@ -1,0 +1,7 @@
+nombre: A7_l14
+pareja: A
+descripcion: "Idea 7a: CLIP ViT-L/14 (768)."
+vectores:
+  - clip_l14__centro
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

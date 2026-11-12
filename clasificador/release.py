@@ -8,7 +8,8 @@ Copia a `releases/<tag>/`:
 - `<nombre>.yaml` (la receta del experimento)
 - `LEEME.md`: resumen y comparación contra el release anterior. Es el texto del release en GitHub.
 
-Después: commit, `git tag <tag>` y `git push --tags`. GitHub Actions crea el release.
+Después: commit en la rama `release-<tag>` y Pull Request; al fusionarlo, `git tag <tag>` en
+`main` y `git push origin <tag>`. GitHub Actions crea el release (notebook `C_release`).
 """
 
 import argparse
@@ -75,8 +76,10 @@ def preparar(tag: str, nombre: str, notas: str = "") -> None:
                       f"{test['F1_macro'] - macro_previo:+.3f} |")
 
     (destino / "LEEME.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
-    print(f"\nListo: {destino}\nAhora:\n  git add releases/{tag} resultados\n"
-          f"  git commit -m \"Release {tag}\"\n  git tag {tag}\n  git push && git push --tags")
+    print(f"\nListo: {destino}\nAhora (o con el notebook C_release):\n"
+          f"  git checkout -b release-{tag}\n  git add releases/{tag} resultados\n"
+          f"  git commit -m \"Release {tag}\"\n  git push origin release-{tag}   # y abrir el Pull Request\n"
+          f"Al fusionarlo, en main:\n  git tag {tag} && git push origin {tag}")
 
 
 if __name__ == "__main__":

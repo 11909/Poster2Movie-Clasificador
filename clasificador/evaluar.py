@@ -8,7 +8,11 @@ Escribe en `resultados/<nombre>/`:
   y la línea base trivial (siempre los 2 géneros más comunes).
 - `por_genero_<split>.csv`: precisión, recall, F1 y umbral de cada género.
 
-Y agrega una fila a `resultados/registro.csv`.
+- `registro_<split>.csv`: una fila por evaluación (fecha, métricas, vectores, commit).
+
+Y vuelve a armar `resultados/registro.csv` con las filas de todos los experimentos
+(`python -m clasificador.evaluar --registro` lo arma sin evaluar). registro.csv no va en
+git: cada Pull Request solo trae la carpeta de su experimento, así no chocan.
 
 Test solo se mide al publicar un release (`python -m clasificador.release`). Si elegimos
 modelos mirando test, los números finales salen inflados.
@@ -24,9 +28,10 @@ import pandas as pd
 import torch
 from sklearn.metrics import accuracy_score, average_precision_score, f1_score, precision_recall_fscore_support
 
-from clasificador import rutas
+from clasificador import combinado, rutas
 from clasificador.cabezas import cargar_cabeza
-from clasificador.datos import GENEROS, GENEROS_DEBILES, aplicar_umbrales, cargar_split
+from clasificador.combinado import es_combinado
+from clasificador.datos import GENEROS, GENEROS_DEBILES, aplicar_umbrales, cargar_split, cargar_split_por_archivo
 from clasificador.entrenar import commit_actual
 from p2m import config
 
@@ -44,6 +49,19 @@ def metricas(y: np.ndarray, prediccion: np.ndarray, probabilidades: np.ndarray |
     }
 
 
+def probabilidades_split(guardado: dict, split: str) -> tuple[np.ndarray, np.ndarray]:
+    """(probabilidades n × 17, etiquetas) de un split, con los vectores precalculados.
+    Sirve para un .pt normal (contrato 2) y para uno combinado (contrato 4)."""
+    if es_combinado(guardado):
+        xs, y, _ = cargar_split_por_archivo(split, guardado["vectores"])
+        cabezas = combinado.cargar_cabezas(guardado, {v: x.shape[1] for v, x in xs.items()})
+        return combinado.probabilidades(guardado, cabezas, combinado.cargar_etapa2(guardado), xs), y
+    x, y, _ = cargar_split(split, guardado.get("vectores") or ["clip_b32__centro"])
+    cabeza = cargar_cabeza(guardado, x.shape[1])
+    with torch.no_grad():
+        return torch.sigmoid(cabeza(torch.tensor(x))).numpy(), y
+
+
 def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) -> dict:
     if split == "test" and not para_release:
         raise SystemExit("Test solo se mide al publicar un release: usa `python -m clasificador.release`. "
@@ -53,13 +71,11 @@ def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) 
     nombre = experimento.get("nombre", str(nombre_o_ruta))
     vectores = guardado.get("vectores") or ["clip_b32__centro"]  # un .pt del repo principal
 
-    x, y, _ = cargar_split(split, vectores)
-    cabeza = cargar_cabeza(guardado, x.shape[1])
-    with torch.no_grad():
-        prob = torch.sigmoid(cabeza(torch.tensor(x))).numpy()
+    prob, y = probabilidades_split(guardado, split)
     prediccion = aplicar_umbrales(prob, np.asarray(guardado["umbrales"]))
 
-    _, y_train, _ = cargar_split("train", vectores)
+    # para la línea base trivial; en un combinado, con los vectores de su primer miembro
+    _, y_train, _ = cargar_split("train", guardado["miembros"][0]["vectores"] if es_combinado(guardado) else vectores)
     comunes = np.argsort(-y_train.sum(axis=0))[:2]
     trivial = np.zeros_like(y)
     trivial[:, comunes] = 1
@@ -92,9 +108,12 @@ def evaluar(nombre_o_ruta: str, split: str = "val", para_release: bool = False) 
 
 
 def registrar(resultado: dict) -> None:
-    rutas.REGISTRO.parent.mkdir(parents=True, exist_ok=True)
-    nuevo = not rutas.REGISTRO.exists() or rutas.REGISTRO.stat().st_size == 0
-    with open(rutas.REGISTRO, "a", newline="", encoding="utf-8") as archivo:
+    """Agrega la fila a `resultados/<nombre>/registro_<split>.csv` (solo de este experimento:
+    dos Pull Requests nunca tocan el mismo archivo) y vuelve a armar `registro.csv`."""
+    propio = rutas.RESULTADOS / resultado["nombre"] / f"registro_{resultado['split']}.csv"
+    propio.parent.mkdir(parents=True, exist_ok=True)
+    nuevo = not propio.exists() or propio.stat().st_size == 0
+    with open(propio, "a", newline="", encoding="utf-8") as archivo:
         escritor = csv.DictWriter(archivo, fieldnames=COLUMNAS_REGISTRO)
         if nuevo:
             escritor.writeheader()
@@ -106,12 +125,31 @@ def registrar(resultado: dict) -> None:
             **{f"F1_{g}": f"{v:.4f}" for g, v in resultado["F1_debiles"].items()},
             "vectores": "+".join(resultado["vectores"]), "commit": commit_actual(),
         })
+    armar_registro()
+
+
+def armar_registro() -> pd.DataFrame:
+    """`resultados/registro.csv` = las filas de todos los experimentos, por fecha. Es la tabla
+    "base contra cada intento" del reporte. Se arma, no se edita, y no va en git."""
+    partes = [pd.read_csv(a, dtype=str) for a in sorted(rutas.RESULTADOS.glob("*/registro_*.csv"))]
+    tabla = (pd.concat(partes, ignore_index=True) if partes else pd.DataFrame(columns=COLUMNAS_REGISTRO))
+    tabla = tabla.reindex(columns=COLUMNAS_REGISTRO).sort_values("fecha", kind="stable")
+    rutas.REGISTRO.parent.mkdir(parents=True, exist_ok=True)
+    tabla.to_csv(rutas.REGISTRO, index=False)
+    return tabla
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("modelo", help="nombre del experimento (busca <P2M_SALIDAS>/modelos/<nombre>.pt) o ruta a un .pt")
+    parser.add_argument("modelo", nargs="?",
+                        help="nombre del experimento (busca <P2M_SALIDAS>/modelos/<nombre>.pt) o ruta a un .pt")
     parser.add_argument("--split", default="val", choices=["val", "test"])
+    parser.add_argument("--registro", action="store_true", help="solo vuelve a armar resultados/registro.csv")
     parser.add_argument("--para-release", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    evaluar(args.modelo, args.split, args.para_release)
+    if args.registro:
+        print(armar_registro().to_string(index=False))
+    elif args.modelo:
+        evaluar(args.modelo, args.split, args.para_release)
+    else:
+        parser.error("falta el modelo (o usa --registro)")
