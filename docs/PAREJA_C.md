@@ -24,14 +24,14 @@ En test debe dar F1 macro **0.537**; si no, no se publica y se avisa.
 Una cabeza por codificador (B/32, L/14, SigLIP), promediar sus 17 probabilidades y recalibrar
 umbrales. Nada se entrena desde cero.
 
-- [ ] `alinear`: junta las `predicciones/<nombre>.npz` (`ids_val`, `prob_val`) de cada miembro por id.
-- [ ] `ensamblar`: pesos (promedio simple o elegidos en val), umbrales con `calibrar_umbrales`, y
-      guardar con `combinado.guardar(combinado.armar(...))`.
+- [x] `alinear`: junta las `predicciones/<nombre>.npz` (`ids_val`, `prob_val`) de cada miembro por id.
+- [x] `ensamblar`: promedio simple (o `--pesos` a mano), umbrales con `calibrar_umbrales`, y
+      guardar con `combinado.guardar(combinado.armar(...))`. Pesos elegidos en val: por ahora no.
 - [ ] `python -m clasificador.ensamble C7_ensamble base A7_l14 A7_siglip` → evaluar → comparar
       contra cada miembro solo. Mientras A termina 7a, prueben con base + otros experimentos B/32.
 - [ ] Medir el pico de memoria en una T4 (celda del notebook). Si no cabe junto con la reseña y el
       cartel, publicar también una versión ligera (menos miembros).
-- [ ] Quitar el `xfail` de `test_idea7b_alinear_predicciones`.
+- [x] Quitar el `xfail` de `test_idea7b_alinear_predicciones` (y prueba del flujo en `tests/test_ensamble.py`).
 
 **Listo cuando** el ensamble está en validación contra cada modelo solo.
 

@@ -16,4 +16,7 @@ creyó que ayudaría. Los cambios a los contratos del README también se anotan 
 - **Contrato 3:** cada evaluación escribe su fila en `resultados/<nombre>/registro_<split>.csv`;
   `resultados/registro.csv` se arma con ellas y ya no va en git (los PR en paralelo no chocan).
 - Notebooks por idea (ver README) y `00_reproducir_base` (antes `01_`).
+- **Idea 7b (ensamble):** `clasificador/ensamble.py` alinea las predicciones de val de los
+  miembros por id, las promedia (soft voting, pesos iguales), recalibra los 17 umbrales y guarda
+  el combinado (contrato 4). Prueba en `tests/test_ensamble.py`; sin `xfail` en `test_idea7b`.
 - Pendiente: publicar `v0.1.0` con la base reproducida (debe dar F1 macro 0.537 en test).

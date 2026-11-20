@@ -122,7 +122,6 @@ def test_idea6_pliegues_por_franquicia():
     assert (sagas == 1).all()   # una saga nunca queda en dos pliegues
 
 
-@pendiente("Pareja C, idea 7b")
 def test_idea7b_alinear_predicciones():
     from clasificador.ensamble import alinear
 
