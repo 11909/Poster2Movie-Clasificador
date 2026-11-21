@@ -35,13 +35,13 @@ from p2m import datos
 # id corto -> id en Hugging Face
 CODIFICADORES = {
     "clip_b32": "openai/clip-vit-base-patch32",
+    "clip_l14": "openai/clip-vit-large-patch14",
+    "siglip_base": "google/siglip-base-patch16-224",
 }
 VARIANTES = ["centro"]
 
 # Lo que falta, con quién lo hace. Se pueden pedir por nombre: dan un error que dice qué falta.
 CODIFICADORES_PENDIENTES = {
-    "clip_l14": ("openai/clip-vit-large-patch14", "Pareja A, idea 7a (768; misma clase CLIP)"),
-    "siglip_base": ("google/siglip-base-patch16-224", "Pareja A, idea 7a (768; AutoModel, sin projection_dim)"),
     "siglip_so400m": ("google/siglip-so400m-patch14-384", "Pareja A, idea 7a, opcional (1152)"),
     "dinov2_base": ("facebook/dinov2-base", "Pareja A, idea 7a, opcional (768; sin texto)"),
 }
@@ -62,6 +62,12 @@ def cargar_clip(modelo_hf: str):
 
     return CLIPProcessor.from_pretrained(modelo_hf), CLIPModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
 
+@lru_cache(maxsize=None)
+def cargar_siglip(modelo_hf: str):
+    """(procesador, modelo) de SigLIP, UNA vez por modelo (misma idea que cargar_clip)."""
+    from transformers import AutoModel, AutoProcessor
+
+    return AutoProcessor.from_pretrained(modelo_hf), AutoModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
 
 def pendiente(codificador: str, variante: str = "centro") -> None:
     """Error claro si se pide algo que todavía no existe."""
@@ -136,6 +142,25 @@ class CodificadorCLIP(Codificador):
             vectores = vectores.pooler_output
         return torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
 
+class CodificadorSigLIP(Codificador):
+    """SigLIP de Google. Sin projection_dim: `dim` sale del tamaño del vector."""
+
+    def __init__(self, codificador: str = "siglip_base", variante: str = "centro"):
+        pendiente(codificador, variante)
+        self.nombre = f"{codificador}__{variante}"
+        self.modelo_hf = CODIFICADORES[codificador]
+        self.procesador, self.modelo = cargar_siglip(self.modelo_hf)
+        from PIL import Image
+        self.dim = self.codificar([Image.new("RGB", (224, 224))]).shape[1]
+
+    @torch.inference_mode()
+    def codificar(self, imagenes) -> np.ndarray:
+        entrada = self.procesador(images=imagenes, return_tensors="pt").to(DISPOSITIVO)
+        vectores = self.modelo.get_image_features(**entrada)
+        if not torch.is_tensor(vectores):  # transformers >= 5 regresa un objeto
+            vectores = vectores.pooler_output
+        return torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
+
 
 def crear_codificador(nombre_vectores: str) -> Codificador:
     """`clip_b32__centro` -> el codificador que produce esos vectores."""
@@ -144,6 +169,8 @@ def crear_codificador(nombre_vectores: str) -> Codificador:
     pendiente(codificador, variante)
     if codificador.startswith("clip_"):
         return CodificadorCLIP(codificador, variante)
+    if codificador.startswith("siglip_"):
+        return CodificadorSigLIP(codificador, variante)
     raise NotImplementedError(f"Codificador '{codificador}': falta registrarlo en crear_codificador.")
 
 
