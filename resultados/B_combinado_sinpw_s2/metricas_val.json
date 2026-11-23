@@ -1,0 +1,32 @@
+{
+  "nombre": "B_combinado_sinpw_s2",
+  "pareja": "B",
+  "split": "val",
+  "peliculas": 6086,
+  "vectores": [
+    "clip_b32__centro"
+  ],
+  "commit_modelo": "feb21fd+cambios",
+  "F1_macro": 0.5544940189779153,
+  "F1_micro": 0.6116641928827427,
+  "F1_por_pelicula": 0.6094681973009282,
+  "mAP": 0.5527618934919253,
+  "acierto_exacto": 0.17959250739401905,
+  "F1_debiles": {
+    "Mystery": 0.33507853403141363,
+    "History": 0.38811881188118813,
+    "Fantasy": 0.40587449933244324,
+    "Crime": 0.4370493621741542
+  },
+  "trivial": {
+    "generos": [
+      "Drama",
+      "Comedy"
+    ],
+    "F1_macro": 0.06442121922335221,
+    "F1_micro": 0.3722870782685441,
+    "F1_por_pelicula": 0.3834197924980048,
+    "mAP": null,
+    "acierto_exacto": 0.03910614525139665
+  }
+}

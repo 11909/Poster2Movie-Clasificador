@@ -1,0 +1,14 @@
+cabeza:
+  tipo: lineal
+descripcion: 'Idea 4 (extra): Focal Loss gamma 2 sin pos_weight (alfa = 1), para ver
+  si gamma solo basta contra el desbalance.'
+entrenamiento:
+  semilla: 2
+nombre: B4_focal_g2_sinpw_s2
+pareja: B
+perdida:
+  gamma: 2
+  pos_weight: false
+  tipo: focal
+vectores:
+- clip_b32__centro

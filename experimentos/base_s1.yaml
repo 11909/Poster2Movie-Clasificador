@@ -1,0 +1,16 @@
+cabeza:
+  tipo: lineal
+descripcion: Sistema base del repo principal, reproducido.
+entrenamiento:
+  epocas: 200
+  lote: 256
+  paciencia: 10
+  semilla: 1
+  tasa: 0.001
+  weight_decay: 0.0001
+nombre: base_s1
+pareja: base
+perdida:
+  tipo: bce
+vectores:
+- clip_b32__centro
