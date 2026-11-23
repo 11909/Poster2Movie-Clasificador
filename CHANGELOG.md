@@ -38,5 +38,5 @@ creyó que ayudaría. Los cambios a los contratos del README también se anotan 
   con un modelo imagen + pistas y el ranking.
 - **Para integrar en el repo principal:** una cabeza con GELU o LayerNorm necesita llevar
   `construir_cabeza` de `cabezas.py` a `p2m/clasificador.py` (ver `docs/PAREJA_C.md`).
-- Pendiente: correr los experimentos de la Pareja B con el dataset real (rejilla B3, B4, B5).
+- **Resultados de la Pareja B (validación; base: F1 macro 0.544, débiles 0.384):** focal γ=1, 2, 3 igual a la base (cabeza lineal). Pistas zero-shot: igual a la base con cabeza lineal y peor con MLP (0.535, sobreajuste). MLP 512×256 GELU LayerNorm dropout 0.5: F1 macro 0.544 a 0.550 con 4 semillas, sin mejora confiable en los débiles. `B_combinado` (ese MLP + focal γ=2), 4 semillas: F1 macro 0.551 (+0.007) y mAP 0.548 (+0.010); débiles 0.386 (+0.002, dentro del ruido: suben Misterio y Crimen, bajan Historia y Fantasía). `B4_focal_g2_sinpw` no se corrió.
 - Pendiente: publicar `v0.1.0` con la base reproducida (debe dar F1 macro 0.537 en test).

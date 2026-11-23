@@ -27,7 +27,7 @@ viejos siguen cargando.
 - [x] Rejilla desde el notebook: 1 a 3 capas ocultas, ancho 256/512/1024, ReLU/GELU,
       dropout 0.2/0.4, lr 1e-3/3e-4, LayerNorm sí/no (96 configuraciones; `RAPIDA = True` tamiza 24
       y afina las mejores). Cada configuración es un `B3_<...>.yaml`.
-- [ ] **Correr la rejilla** (`notebooks/B3_cabezas.ipynb`) y repetir la mejor con 3 semillas.
+- [x] **Correr la rejilla** (`notebooks/B3_cabezas.ipynb`) y repetir la mejor con 3 semillas.
 - [ ] Opcional: early stopping por mAP o F1 calibrado (cambia `entrenar.py`, que es de todos: avisen).
 - [x] Quitar el `xfail` de `test_idea3_gelu_y_layernorm`.
 
@@ -44,7 +44,7 @@ y el entrenamiento se va a los confusos (p = 0.3 → ×0.49).
       fácil es el ejemplo, no qué tan raro es el género (Western 1 %); y así la única diferencia contra la
       base es γ. `pos_weight: false` lo quita y se mide en `B4_focal_g2_sinpw`. Razones completas en
       el docstring de `perdidas.py`.
-- [ ] **Correr** `B4_focal_g1`, `_g2`, `_g3` y `_g2_sinpw` (ya están en `experimentos/`). Los umbrales se
+- [x] **Correr** `B4_focal_g1`, `_g2`, `_g3` (`_g2_sinpw` queda pendiente) (ya están en `experimentos/`). Los umbrales se
       recalibran solos al entrenar. Miren también el mAP: la focal comprime las probabilidades.
 - [x] Quitar el `xfail` de `test_idea4_focal_loss`.
 
@@ -57,13 +57,13 @@ números entran a la cabeza junto al vector de imagen.
 
 - [x] En `zeroshot.py`: `FRASES` (3 a 5 por género, en inglés; 5 en los cuatro débiles), `similitudes` y
       `calcular`. `calcular` no vuelve a codificar carteles: usa `clip_b32__centro` (ya normalizados) × frases.
-- [ ] **Correr** `python -m clasificador.zeroshot clip_b32` → `vectores/clip_b32__zeroshot.npz` (N × 17).
-- [ ] `python -m clasificador.zeroshot clip_b32 --diagnostico`: AUC de cada pista en validación. Si un
+- [x] **Correr** `python -m clasificador.zeroshot clip_b32` → `vectores/clip_b32__zeroshot.npz` (N × 17).
+- [x] `python -m clasificador.zeroshot clip_b32 --diagnostico`: AUC de cada pista en validación. Si un
       género débil sale cerca de 0.5, reescriban sus frases (se afina con validación, nunca test).
 - [x] Variante `zeroshot` en `codificadores.py` (`CodificadorZeroshot`, archivo de la Pareja A: cambio
       chico) para que el **predictor** calcule las pistas de un cartel nuevo. Una prueba verifica que da lo
       mismo que `calcular` y que un `.pt` imagen + pistas predice igual que en el entrenamiento.
-- [ ] **Correr** `B5_zeroshot` (cabeza lineal) y `B5_zeroshot_mlp` (`vectores: [clip_b32__centro, clip_b32__zeroshot]`).
+- [x] **Correr** `B5_zeroshot` (cabeza lineal) y `B5_zeroshot_mlp` (`vectores: [clip_b32__centro, clip_b32__zeroshot]`).
 - [x] Quitar el `xfail` de `test_idea5_zeroshot`.
 
 **Qué esperar:** cada pista es una función *lineal* del vector de imagen, así que con una cabeza lineal
