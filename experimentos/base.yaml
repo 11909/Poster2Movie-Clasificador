@@ -8,10 +8,10 @@ vectores:               # uno o varios archivos del contrato 1; si son varios, s
   - clip_b32__centro
 
 cabeza:
-  tipo: lineal          # lineal | mlp (con ocultas: [512, 256] y dropout: 0.2)
+  tipo: lineal          # lineal | mlp (ocultas: [512, 256], dropout: 0.2, activacion: relu|gelu, layernorm: true|false)
 
 perdida:
-  tipo: bce             # bce | focal (pendiente)
+  tipo: bce             # bce | focal (con gamma: 2; pos_weight: false lo quita)
 
 entrenamiento:
   epocas: 200

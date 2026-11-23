@@ -51,6 +51,18 @@ entrenamiento: {epocas: 200, tasa: 0.001, paciencia: 10, lote: 256, weight_decay
 
 Un tipo nuevo de cabeza o de pérdida se agrega en `cabezas.py` o `perdidas.py` y se documenta en este archivo.
 
+Claves conocidas (una clave que no está aquí da error):
+
+| Sección | Tipo | Claves |
+| --- | --- | --- |
+| `cabeza` | `lineal` | `tipo` |
+| `cabeza` | `mlp` | `ocultas` (lista de anchos), `dropout` (0 a <1, def. 0.2), `activacion` (`relu` \| `gelu`, def. `relu`), `layernorm` (`true` \| `false`, def. `false`; va entre la capa lineal y la activación) |
+| `perdida` | `bce` | `tipo` (con `pos_weight` = negativos/positivos por género) |
+| `perdida` | `focal` | `gamma` (≥ 0, def. 2; 0 = la BCE), `pos_weight` (`true` por defecto = α por género como en la BCE; `false` = α 1) |
+
+Las pistas zero-shot (`clip_b32__zeroshot`, N × 17) son vectores del contrato 1 como cualquier otro:
+`vectores: [clip_b32__centro, clip_b32__zeroshot]` los concatena por id.
+
 ### Contrato 3 — Métricas (lo usan todos)
 
 `python -m clasificador.evaluar <nombre>` escribe en `resultados/<nombre>/`:

@@ -89,9 +89,9 @@ La lógica vive en `clasificador/*.py`; el notebook solo la corre.
 | `A1_multirecorte` | A · 1 | Vectores `relleno` y `3recortes` + experimentos | nada | sí |
 | `A2_ocr` | A · 2 | OCR en 2 mil carteles + experimento; si ayuda, todo el dataset | nada | sí |
 | `A7_codificadores` | A · 7a | Vectores CLIP L/14 y SigLIP + una cabeza por codificador | nada | sí |
-| `B3_cabezas` | B · 3 | Rejilla de MLP | vectores B/32 (ya existen) | no |
-| `B4_focal` | B · 4 | Focal Loss con γ = 1, 2, 3 | vectores B/32 | no |
-| `B5_zeroshot` | B · 5 | Pistas zero-shot + experimento imagen + pistas | vectores B/32 | una vez |
+| `B3_cabezas` | B · 3 | Rejilla de MLP (tamiz de 24 + afinar + 3 semillas) | vectores B/32 (ya existen) | no |
+| `B4_focal` | B · 4 | Focal Loss con γ = 1, 2, 3 (+ γ = 2 sin pos_weight) | vectores B/32 | no |
+| `B5_zeroshot` | B · 5 | Pistas zero-shot + diagnóstico + experimento imagen + pistas (lineal y MLP) | vectores B/32 | una vez |
 | `C6_apilamiento` | C · 6 | Etapa 2 fuera de pliegue + mapa de calor 17 × 17 | cualquier experimento | no |
 | `C7_ensamble` | C · 7b | Ensamble contra cada modelo solo + memoria en T4 | experimentos de A7 (o B/32 mientras) | sí |
 | `C_release` | C | Comparar, publicar un release y probar un cartel | lo que se publique | no |
@@ -103,9 +103,11 @@ rama de la idea** (nunca a `main`). En Colab el repo se borra al cerrar: suban `
 
 - `pytest -q -rxX`: cada idea tiene su prueba en `tests/test_pendientes.py`, marcada como pendiente
   (`x`). Cuando la idea funciona, pytest avisa (`XPASS`) y se quita la marca en ese mismo PR.
-- Lo pendiente **avisa, nunca corre en silencio**: pedir `clip_l14`, `--variante ocr`,
-  `activacion: gelu` o `perdida: focal` antes de implementarlos da un error que dice qué pareja lo
-  hace y dónde.
+- Lo pendiente **avisa, nunca corre en silencio**: pedir `clip_l14`, `--variante ocr` o
+  `--variante 3recortes` antes de implementarlos da un error que dice qué pareja lo hace y dónde. Un
+  valor inválido en la cabeza o la pérdida (`activacion: swish`, `gamma: -1`) también da error.
+- `python -m clasificador.ranking B3_` ordena los experimentos de una idea contra la base con la
+  regla de publicación (F1 macro no baja y los 4 débiles suben).
 - `resultados/registro.csv` (se arma con `python -m clasificador.evaluar --registro`): todos los
   experimentos con sus métricas en validación. Es la tabla "base contra cada intento" del reporte.
 
@@ -133,6 +135,7 @@ Todos se corren desde la raíz del repo (en Colab, con `!` al inicio).
 | `python -m clasificador.codificadores <codificador> --variante <variante>` | Igual con otro codificador (`clip_l14`, `siglip_base`…) o variante (`relleno`, `3recortes`, `ocr`) |
 | `... --muestra 2000` | Solo 2 mil películas fijas (prueba chica) |
 | `python -m clasificador.zeroshot clip_b32` | Pistas zero-shot → `vectores/clip_b32__zeroshot.npz` |
+| `python -m clasificador.zeroshot clip_b32 --diagnostico` | AUC por género de las pistas en validación (sin entrenar) |
 
 **Entrenar y medir (contratos 2 y 3)**
 
@@ -142,6 +145,7 @@ Todos se corren desde la raíz del repo (en Colab, con `!` al inicio).
 | `python -m clasificador.evaluar <nombre>` | Métricas en **validación** → `resultados/<nombre>/` y registro |
 | `python -m clasificador.evaluar --registro` | Solo arma `resultados/registro.csv` con todos los experimentos |
 | `python -m clasificador.comparar <a> <b>` | Dos experimentos o releases, género por género (débiles primero) |
+| `python -m clasificador.ranking <prefijo>` | Los experimentos `<prefijo>*` contra la base, con la regla de publicación (`cumple`) |
 | `python -m clasificador.comparar v0.1.0 v0.2.0 --split test` | Dos releases en test |
 
 **Combinar (contrato 4)**
@@ -192,9 +196,10 @@ Clasificador("ruta/modelo.pt").predecir(img)   # un .pt normal o combinado
 poster2movie/            repo principal como submódulo (fijo en un commit): p2m.config, p2m.datos
 clasificador/
 ├── codificadores.py     A · cartel -> vector (contrato 1); B agrega la variante zeroshot
-├── cabezas.py           B · lineal, MLP...
+├── cabezas.py           B · lineal, MLP (ReLU/GELU, LayerNorm)
 ├── perdidas.py          B · BCE, Focal Loss
 ├── zeroshot.py          B · similitudes con frases por género
+├── ranking.py           B · experimentos de una idea contra la base (regla de publicación)
 ├── apilamiento.py       C · etapa 2, predicciones fuera de pliegue
 ├── ensamble.py          C · promedio de probabilidades
 ├── combinado.py         contrato 4: cómo se combinan (lo usan evaluar y predictor)
