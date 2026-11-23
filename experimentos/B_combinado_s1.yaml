@@ -1,0 +1,7 @@
+nombre: B_combinado_s1
+pareja: B
+descripcion: B_combinado con otra semilla.
+vectores: [clip_b32__centro]
+cabeza: {"tipo": "mlp", "ocultas": [512, 256], "dropout": 0.5, "activacion": "gelu", "layernorm": true}
+perdida: {"tipo": "focal", "gamma": 2}
+entrenamiento: {"tasa": 0.0003, "weight_decay": 0.001, "semilla": 1}
