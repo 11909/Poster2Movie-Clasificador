@@ -25,7 +25,7 @@ def pendiente(quien):
 
 def test_lo_pendiente_avisa():
     with pytest.raises(NotImplementedError, match="Pareja A"):
-        codificadores.crear_codificador("clip_l14__centro")
+        codificadores.crear_codificador("siglip_so400m__centro")
     with pytest.raises(NotImplementedError, match="idea 1"):
         codificadores.crear_codificador("clip_b32__3recortes")
     with pytest.raises(NotImplementedError, match="idea 5"):
@@ -63,7 +63,6 @@ def test_idea2_ocr_registrado():
     assert "ocr" in codificadores.VARIANTES and "ocr" not in codificadores.VARIANTES_PENDIENTES
 
 
-@pendiente("Pareja A, idea 7a")
 def test_idea7a_codificadores_nuevos():
     assert {"clip_l14", "siglip_base"} <= set(codificadores.CODIFICADORES)
 
