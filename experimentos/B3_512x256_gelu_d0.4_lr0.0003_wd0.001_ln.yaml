@@ -1,0 +1,6 @@
+nombre: B3_512x256_gelu_d0.4_lr0.0003_wd0.001_ln
+pareja: B
+descripcion: Idea 3, MLP regularizado.
+vectores: [clip_b32__centro]
+cabeza: {"tipo": "mlp", "ocultas": [512, 256], "dropout": 0.4, "activacion": "gelu", "layernorm": true}
+entrenamiento: {"tasa": 0.0003, "weight_decay": 0.001}

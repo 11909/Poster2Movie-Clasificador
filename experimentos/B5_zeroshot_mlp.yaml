@@ -1,0 +1,8 @@
+nombre: B5_zeroshot_mlp
+pareja: B
+descripcion: "Idea 5 (extra): imagen + 17 pistas zero-shot con un MLP. Las pistas son lineales en la imagen, así que solo un MLP puede mezclarlas con ella."
+vectores:
+  - clip_b32__centro
+  - clip_b32__zeroshot
+cabeza: {tipo: mlp, ocultas: [512], dropout: 0.2}
+perdida: {tipo: bce}

@@ -5,7 +5,8 @@ Cada archivo de vectores se llama `<codificador>__<variante>`, por ejemplo
 predictor, así el entrenamiento y la demo procesan igual el cartel.
 
 Hoy existe:
-    clip_b32 + centro   CLIP ViT-B/32, recorte central de 224 px (el de la base)
+    clip_b32 + centro      CLIP ViT-B/32, recorte central de 224 px (el de la base)
+    clip_b32 + zeroshot    17 similitudes cartel-frases de género (Pareja B, idea 5; clasificador/zeroshot.py)
 
 Pendiente (Pareja A):
     variantes `relleno` y `3recortes` (idea 1), `ocr` (idea 2)
@@ -38,7 +39,7 @@ CODIFICADORES = {
     "clip_l14": "openai/clip-vit-large-patch14",
     "siglip_base": "google/siglip-base-patch16-224",
 }
-VARIANTES = ["centro"]
+VARIANTES = ["centro", "zeroshot"]
 
 # Lo que falta, con quién lo hace. Se pueden pedir por nombre: dan un error que dice qué falta.
 CODIFICADORES_PENDIENTES = {
@@ -49,7 +50,6 @@ VARIANTES_PENDIENTES = {
     "relleno": "Pareja A, idea 1: relleno a cuadrado, un vector",
     "3recortes": "Pareja A, idea 1: arriba/centro/abajo, promediar o concatenar",
     "ocr": "Pareja A, idea 2: EasyOCR -> codificar_texto (vector de ceros si no hay texto)",
-    "zeroshot": "Pareja B, idea 5: 17 similitudes cartel-frases (clasificador/zeroshot.py)",
 }
 DISPOSITIVO = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -86,11 +86,12 @@ def recortes(imagen, variante: str = "centro") -> list:
     """Las imágenes que ve el codificador para UN cartel, según la variante (idea 1).
 
     centro      [cartel]: el procesador de CLIP reescala y recorta el cuadrado central
+    zeroshot    [cartel]: el mismo recorte que centro; la diferencia está después (17 similitudes)
     relleno     [cartel con bordes hasta ser cuadrado]: CLIP lo ve completo     (PENDIENTE)
     3recortes   [arriba, centro, abajo]: tres cuadrados que cubren el cartel     (PENDIENTE)
 
     Se usa IGUAL al calcular los vectores y al predecir (la clase del codificador la llama)."""
-    if variante == "centro":
+    if variante in ("centro", "zeroshot"):
         return [imagen]
     pendiente("clip_b32", variante)
     raise ValueError(f"Variante sin recortes: '{variante}'.")
@@ -162,12 +163,38 @@ class CodificadorSigLIP(Codificador):
         return torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
 
 
+class CodificadorZeroshot(Codificador):
+    """Pistas de texto (idea 5): cartel -> 17 similitudes coseno con frases de cada género.
+
+    Usa el MISMO cálculo que `zeroshot.calcular` (`similitudes` sobre vectores normalizados), así
+    el entrenamiento (archivo `__zeroshot`) y el predictor (cartel nuevo) dan lo mismo. Comparte el
+    CLIP cargado con `CodificadorCLIP` (`cargar_clip` guarda uno por modelo): no ocupa más memoria.
+    Las frases se codifican una sola vez, al crearlo.
+    """
+
+    def __init__(self, codificador: str = "clip_b32"):
+        from clasificador import zeroshot  # aquí: zeroshot.calcular importa este archivo
+
+        self.base = CodificadorCLIP(codificador, "centro")
+        self.nombre = f"{codificador}__zeroshot"
+        self.modelo_hf = self.base.modelo_hf
+        self.dim = len(zeroshot.FRASES)
+        self.frases = zeroshot.codificar_frases(self.base)
+
+    def codificar(self, imagenes) -> np.ndarray:
+        from clasificador import zeroshot
+
+        return zeroshot.similitudes(zeroshot.normalizar(self.base.codificar(imagenes)), self.frases)
+
+
 def crear_codificador(nombre_vectores: str) -> Codificador:
     """`clip_b32__centro` -> el codificador que produce esos vectores."""
     codificador, _, variante = nombre_vectores.partition("__")
     variante = variante or "centro"
     pendiente(codificador, variante)
     if codificador.startswith("clip_"):
+        if variante == "zeroshot":
+            return CodificadorZeroshot(codificador)
         return CodificadorCLIP(codificador, variante)
     if codificador.startswith("siglip_"):
         return CodificadorSigLIP(codificador, variante)
@@ -184,6 +211,10 @@ def calcular_vectores(codificador: str, variante: str = "centro", lote: int = 64
     `muestra`: solo esas películas (fijas, de todos los splits), para probar una idea cara
     (p. ej. OCR con 2 mil) antes de correrla en todo el dataset. OJO: un experimento con
     estos vectores solo ve esas películas; compárenlo contra la base en las mismas."""
+    if variante == "zeroshot":  # no hace falta ver los carteles otra vez: sale de los vectores `centro`
+        from clasificador import zeroshot
+
+        return zeroshot.calcular(codificador)
     modelo = crear_codificador(f"{codificador}__{variante}")
     destino = rutas.carpeta_vectores() / f"{modelo.nombre}.npz"
     partes = rutas.carpeta_vectores() / "partes" / (modelo.nombre + (f"_muestra{muestra}" if muestra else ""))

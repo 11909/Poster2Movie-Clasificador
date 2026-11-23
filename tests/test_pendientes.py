@@ -28,8 +28,6 @@ def test_lo_pendiente_avisa():
         codificadores.crear_codificador("siglip_so400m__centro")
     with pytest.raises(NotImplementedError, match="idea 1"):
         codificadores.crear_codificador("clip_b32__3recortes")
-    with pytest.raises(NotImplementedError, match="idea 5"):
-        codificadores.crear_codificador("clip_b32__zeroshot")
     with pytest.raises(ValueError):
         construir_cabeza({"tipo": "mlp", "ocultas": [8], "activasion": "gelu"}, 4, 17)  # clave mal escrita
 
@@ -69,7 +67,6 @@ def test_idea7a_codificadores_nuevos():
 
 # --- Pareja B
 
-@pendiente("Pareja B, idea 3")
 def test_idea3_gelu_y_layernorm():
     cabeza = construir_cabeza({"tipo": "mlp", "ocultas": [32, 16], "activacion": "gelu",
                                "layernorm": True, "dropout": 0.2}, 64, 17)
@@ -78,7 +75,6 @@ def test_idea3_gelu_y_layernorm():
     assert cabeza(torch.zeros(3, 64)).shape == (3, 17)
 
 
-@pendiente("Pareja B, idea 4")
 def test_idea4_focal_loss():
     from clasificador.perdidas import construir_perdida
 
@@ -91,7 +87,6 @@ def test_idea4_focal_loss():
     assert focal < sin_foco   # los fáciles casi no cuentan
 
 
-@pendiente("Pareja B, idea 5")
 def test_idea5_zeroshot():
     from clasificador import zeroshot
 
