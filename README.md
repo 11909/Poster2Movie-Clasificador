@@ -89,6 +89,7 @@ La lógica vive en `clasificador/*.py`; el notebook solo la corre.
 | `A1_multirecorte` | A · 1 | Vectores `relleno` y `3recortes` + experimentos | nada | sí |
 | `A2_ocr` | A · 2 | OCR en 2 mil carteles + experimento; si ayuda, todo el dataset | nada | sí |
 | `A7_codificadores` | A · 7a | Vectores CLIP L/14 y SigLIP + una cabeza por codificador | nada | sí |
+| `A7_codificadores_kaggle` | A · 7a | Lo mismo en Kaggle (botón en `A7_codificadores`); sube vectores, modelos y predicciones al Drive del equipo con rclone | secreto `RCLONE_DRIVE_TOKEN` en Kaggle | sí |
 | `B3_cabezas` | B · 3 | Rejilla de MLP (tamiz de 24 + afinar + 3 semillas) | vectores B/32 (ya existen) | no |
 | `B4_focal` | B · 4 | Focal Loss con γ = 1, 2, 3 (+ γ = 2 sin pos_weight) | vectores B/32 | no |
 | `B5_zeroshot` | B · 5 | Pistas zero-shot + diagnóstico + experimento imagen + pistas (lineal y MLP) | vectores B/32 | una vez |

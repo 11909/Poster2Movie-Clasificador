@@ -39,4 +39,10 @@ creyó que ayudaría. Los cambios a los contratos del README también se anotan 
 - **Para integrar en el repo principal:** una cabeza con GELU o LayerNorm necesita llevar
   `construir_cabeza` de `cabezas.py` a `p2m/clasificador.py` (ver `docs/PAREJA_C.md`).
 - **Resultados de la Pareja B (validación; base: F1 macro 0.544, débiles 0.384):** focal γ=1, 2, 3 igual a la base (cabeza lineal). Pistas zero-shot: igual a la base con cabeza lineal y peor con MLP (0.535, sobreajuste). MLP 512×256 GELU LayerNorm dropout 0.5: F1 macro 0.544 a 0.550 con 4 semillas, sin mejora confiable en los débiles. `B_combinado` (ese MLP + focal γ=2), 4 semillas: F1 macro 0.551 (+0.007) y mAP 0.548 (+0.010); débiles 0.386 (+0.002, dentro del ruido: suben Misterio y Crimen, bajan Historia y Fantasía). `B4_focal_g2_sinpw` no se corrió.
+- **Notebook de Kaggle para la idea 7a:** `notebooks/A7_codificadores_kaggle.ipynb`, con botón "Abrir en
+  Kaggle" en `A7_codificadores.ipynb`. Kaggle no monta Google Drive: usa rclone (secreto
+  `RCLONE_DRIVE_TOKEN`) para bajar el dataset y los pedazos de vectores ya calculados, y para subir
+  vectores, modelos y predicciones a la carpeta del equipo cada 10 minutos y al terminar (solo copia,
+  nunca borra). Con los secretos `GITHUB_TOKEN`, `GIT_NOMBRE` y `GIT_CORREO` sube `resultados/` a la
+  rama sin preguntar (sirve en *Save & Run All*).
 - Pendiente: publicar `v0.1.0` con la base reproducida (debe dar F1 macro 0.537 en test).
