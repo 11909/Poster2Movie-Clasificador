@@ -1,0 +1,21 @@
+cabeza:
+  activacion: gelu
+  dropout: 0.5
+  layernorm: true
+  ocultas:
+  - 512
+  - 256
+  tipo: mlp
+descripcion: MLP 512x256 GELU LayerNorm dropout 0.5 + Focal Loss gamma 2.
+entrenamiento:
+  semilla: 3
+  tasa: 0.0003
+  weight_decay: 0.001
+nombre: B_combinado_sinpw_s3
+pareja: B
+perdida:
+  gamma: 2
+  pos_weight: false
+  tipo: focal
+vectores:
+- clip_b32__centro

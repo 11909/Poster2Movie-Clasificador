@@ -1,0 +1,2 @@
+fecha,nombre,pareja,split,F1_macro,F1_micro,mAP,F1_Mystery,F1_History,F1_Fantasy,F1_Crime,vectores,commit
+2026-11-23T06:46:28+00:00,base_s1,base,val,0.5444,0.6057,0.5375,0.3107,0.4027,0.3918,0.4362,clip_b32__centro,bd2f89f+cambios

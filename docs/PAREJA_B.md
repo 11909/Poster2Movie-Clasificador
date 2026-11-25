@@ -44,7 +44,7 @@ y el entrenamiento se va a los confusos (p = 0.3 → ×0.49).
       fácil es el ejemplo, no qué tan raro es el género (Western 1 %); y así la única diferencia contra la
       base es γ. `pos_weight: false` lo quita y se mide en `B4_focal_g2_sinpw`. Razones completas en
       el docstring de `perdidas.py`.
-- [x] **Correr** `B4_focal_g1`, `_g2`, `_g3` (`_g2_sinpw` queda pendiente) (ya están en `experimentos/`). Los umbrales se
+- [x] **Correr** `B4_focal_g1`, `_g2`, `_g3` y `_g2_sinpw` (ya están en `experimentos/`). Los umbrales se
       recalibran solos al entrenar. Miren también el mAP: la focal comprime las probabilidades.
 - [x] Quitar el `xfail` de `test_idea4_focal_loss`.
 

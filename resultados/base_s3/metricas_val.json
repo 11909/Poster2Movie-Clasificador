@@ -1,0 +1,32 @@
+{
+  "nombre": "base_s3",
+  "pareja": "base",
+  "split": "val",
+  "peliculas": 6086,
+  "vectores": [
+    "clip_b32__centro"
+  ],
+  "commit_modelo": "feb21fd+cambios",
+  "F1_macro": 0.5435863420669111,
+  "F1_micro": 0.6059825190653619,
+  "F1_por_pelicula": 0.6016262692651125,
+  "mAP": 0.5382039819571446,
+  "acierto_exacto": 0.15050936575747617,
+  "F1_debiles": {
+    "Mystery": 0.30642504118616143,
+    "History": 0.40264026402640263,
+    "Fantasy": 0.3966547192353644,
+    "Crime": 0.4329004329004329
+  },
+  "trivial": {
+    "generos": [
+      "Drama",
+      "Comedy"
+    ],
+    "F1_macro": 0.06442121922335221,
+    "F1_micro": 0.3722870782685441,
+    "F1_por_pelicula": 0.3834197924980048,
+    "mAP": null,
+    "acierto_exacto": 0.03910614525139665
+  }
+}
