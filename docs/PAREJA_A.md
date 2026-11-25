@@ -12,7 +12,7 @@ usa el predictor en la demo: el cartel se procesa igual al entrenar y al predeci
 | --- | --- | --- | --- |
 | 1 · Multi-recorte | `A-multirecorte` | `notebooks/A1_multirecorte.ipynb` | sí |
 | 2 · OCR | `A-ocr` | `notebooks/A2_ocr.ipynb` | sí |
-| 7a · Nuevos codificadores | `A-codificadores` | `notebooks/A7_codificadores.ipynb` | sí |
+| 7a · Nuevos codificadores | `A-codificadores` | `notebooks/A7_codificadores.ipynb` (o `A7_codificadores_kaggle.ipynb` en Kaggle) | sí |
 
 **Orden sugerido:** 7a primero (C la necesita para el ensamble), luego 1, luego 2.
 
@@ -66,6 +66,10 @@ también para el mejor codificador de 7a.
 
 - **Cuota de GPU de Colab:** calculen primero lo prioritario y repartan entre sus dos cuentas. El
   cálculo guarda por partes: si Colab se desconecta, al volver a correrlo continúa.
+- **Sin GPU en Colab:** `notebooks/A7_codificadores_kaggle.ipynb` (botón "Abrir en Kaggle" en el
+  notebook de Colab) hace lo mismo en Kaggle. Como Kaggle no monta Drive, baja el dataset y sube
+  vectores, modelos y predicciones a `poster2movie_clasificador/` con rclone; necesita el secreto
+  `RCLONE_DRIVE_TOKEN` (instrucciones en el notebook). Continúa con los pedazos que ya estén en el Drive.
 - **`codificadores.py` también lo toca la Pareja B** (variante `zeroshot`). Cambios chicos y
   localizados; PRs cortos para no chocar.
 - **Para la demo:** todo codificador o variante que termine en un release hay que copiarlo a
