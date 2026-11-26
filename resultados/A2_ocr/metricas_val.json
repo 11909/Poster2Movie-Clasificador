@@ -1,0 +1,33 @@
+{
+  "nombre": "A2_ocr",
+  "pareja": "A",
+  "split": "val",
+  "peliculas": 195,
+  "vectores": [
+    "clip_b32__centro",
+    "clip_b32__ocr"
+  ],
+  "commit_modelo": "8371741",
+  "F1_macro": 0.5206201717067822,
+  "F1_micro": 0.5954198473282443,
+  "F1_por_pelicula": 0.5926251526251526,
+  "mAP": 0.48502462398505003,
+  "acierto_exacto": 0.14358974358974358,
+  "F1_debiles": {
+    "Mystery": 0.21052631578947367,
+    "History": 0.631578947368421,
+    "Fantasy": 0.25,
+    "Crime": 0.3870967741935484
+  },
+  "trivial": {
+    "generos": [
+      "Drama",
+      "Comedy"
+    ],
+    "F1_macro": 0.06396059541297813,
+    "F1_micro": 0.37948717948717947,
+    "F1_por_pelicula": 0.389059829059829,
+    "mAP": null,
+    "acierto_exacto": 0.03076923076923077
+  }
+}
