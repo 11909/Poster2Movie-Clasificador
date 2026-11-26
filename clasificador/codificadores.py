@@ -9,10 +9,9 @@ Hoy existe:
     clip_b32 + zeroshot    17 similitudes cartel-frases de género (Pareja B, idea 5; clasificador/zeroshot.py)
     clip_l14 + centro      CLIP ViT-L/14, recorte central (768)
     siglip_base + centro   SigLIP Base, recorte central (768)
-    variantes              centro, zeroshot, relleno (cartel completo con bordes), 3recortes (concatenado 3x)
+    variantes              centro, zeroshot, relleno (cartel completo con bordes), 3recortes (concatenado 3x), ocr (EasyOCR -> texto)
 
 Pendiente (Pareja A):
-    variante `ocr` (idea 2)
     codificadores opcionales `siglip_so400m`, `dinov2_base` (idea 7a)
 
 Uso:
@@ -45,16 +44,14 @@ CODIFICADORES = {
     "clip_l14": "openai/clip-vit-large-patch14",
     "siglip_base": "google/siglip-base-patch16-224",
 }
-VARIANTES = ["centro", "zeroshot", "relleno", "3recortes"]
+VARIANTES = ["centro", "zeroshot", "relleno", "3recortes", "ocr"]
 
 # Lo que falta, con quién lo hace. Se pueden pedir por nombre: dan un error que dice qué falta.
 CODIFICADORES_PENDIENTES = {
     "siglip_so400m": ("google/siglip-so400m-patch14-384", "Pareja A, idea 7a, opcional (1152)"),
     "dinov2_base": ("facebook/dinov2-base", "Pareja A, idea 7a, opcional (768; sin texto)"),
 }
-VARIANTES_PENDIENTES = {
-    "ocr": "Pareja A, idea 2: EasyOCR -> codificar_texto (vector de ceros si no hay texto)",
-}
+VARIANTES_PENDIENTES = {}
 DISPOSITIVO = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -73,6 +70,14 @@ def cargar_siglip(modelo_hf: str):
     from transformers import AutoModel, AutoProcessor
 
     return AutoProcessor.from_pretrained(modelo_hf), AutoModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
+
+
+@lru_cache(maxsize=None)
+def cargar_ocr():
+    """Reader de EasyOCR cargado UNA sola vez en memoria."""
+    import easyocr
+
+    return easyocr.Reader(["en", "es"], gpu=torch.cuda.is_available())
 
 
 def pendiente(codificador: str, variante: str = "centro") -> None:
@@ -95,9 +100,10 @@ def recortes(imagen, variante: str = "centro") -> list:
     zeroshot    [cartel]: el mismo recorte que centro; la diferencia está después (17 similitudes)
     relleno     [cartel con bordes hasta ser cuadrado]: CLIP lo ve completo
     3recortes   [arriba, centro, abajo]: tres cuadrados que cubren el cartel
+    ocr         [cartel]: lee texto con EasyOCR y lo codifica con CLIP (máx. 77 tokens)
 
     Se usa IGUAL al calcular los vectores y al predecir (la clase del codificador la llama)."""
-    if variante in ("centro", "zeroshot"):
+    if variante in ("centro", "zeroshot", "ocr"):
         return [imagen]
     if variante == "relleno":
         lado = max(imagen.size)
@@ -137,8 +143,10 @@ class Codificador:
 class CodificadorCLIP(Codificador):
     """CLIP de OpenAI. Port de `CodificadorCLIP` del repo principal: vectores normalizados.
 
-    Para `3recortes`, concatena los 3 vectores normalizados [arriba, centro, abajo]
-    (dim = projection_dim * 3, p. ej. 1536 en B/32) para conservar la posición espacial."""
+    - Para `3recortes`, concatena los 3 vectores normalizados [arriba, centro, abajo]
+      (dim = projection_dim * 3, p. ej. 1536 en B/32) para conservar la posición espacial.
+    - Para `ocr`, lee texto con EasyOCR, lo codifica con `codificar_texto` (77 tokens)
+      y devuelve un vector de ceros cuando el cartel no contiene texto legible."""
 
     def __init__(self, codificador: str = "clip_b32", variante: str = "centro"):
         pendiente(codificador, variante)
@@ -151,6 +159,21 @@ class CodificadorCLIP(Codificador):
 
     @torch.inference_mode()
     def codificar(self, imagenes) -> np.ndarray:
+        if self.variante == "ocr":
+            lector = cargar_ocr()
+            textos = []
+            sin_texto = []
+            for img in imagenes:
+                palabras = lector.readtext(np.array(img), detail=0)
+                texto = " ".join(palabras).strip()
+                textos.append(texto if texto else "movie poster")
+                sin_texto.append(len(texto) == 0)
+            vectores = self.codificar_texto(textos)
+            for idx, vacio in enumerate(sin_texto):
+                if vacio:
+                    vectores[idx] = np.zeros(self.dim, dtype=np.float32)
+            return vectores
+
         if self.variante == "centro":
             imgs_a_procesar = imagenes
         else:
