@@ -1,0 +1,32 @@
+{
+  "nombre": "A1_3recortes",
+  "pareja": "A",
+  "split": "val",
+  "peliculas": 6086,
+  "vectores": [
+    "clip_b32__3recortes"
+  ],
+  "commit_modelo": "42100b1",
+  "F1_macro": 0.5628619864250479,
+  "F1_micro": 0.6156948645735545,
+  "F1_por_pelicula": 0.6111844704023475,
+  "mAP": 0.5621891126970958,
+  "acierto_exacto": 0.16201117318435754,
+  "F1_debiles": {
+    "Mystery": 0.31197771587743733,
+    "History": 0.39263803680981596,
+    "Fantasy": 0.4172813487881981,
+    "Crime": 0.44352331606217615
+  },
+  "trivial": {
+    "generos": [
+      "Drama",
+      "Comedy"
+    ],
+    "F1_macro": 0.06442121922335221,
+    "F1_micro": 0.3722870782685441,
+    "F1_por_pelicula": 0.3834197924980048,
+    "mAP": null,
+    "acierto_exacto": 0.03910614525139665
+  }
+}
