@@ -1,0 +1,9 @@
+# Idea 1 sobre el mejor codificador de 7a: A1_3recortes subió el F1 macro de B/32 (+0.019) y A7_l14 es
+# el mejor codificador (+0.061). Necesita los vectores clip_l14__3recortes (GPU, notebook C_cierre).
+nombre: A1_l14_3recortes
+pareja: A
+descripcion: "Idea 1 + 7a: CLIP L/14 con arriba, centro y abajo (768 x 3)."
+vectores:
+  - clip_l14__3recortes
+cabeza: {tipo: lineal}
+perdida: {tipo: bce}

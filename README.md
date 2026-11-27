@@ -95,6 +95,7 @@ La lógica vive en `clasificador/*.py`; el notebook solo la corre.
 | `B5_zeroshot` | B · 5 | Pistas zero-shot + diagnóstico + experimento imagen + pistas (lineal y MLP) | vectores B/32 | una vez |
 | `C6_apilamiento` | C · 6 | Etapa 2 fuera de pliegue + mapa de calor 17 × 17 | cualquier experimento | no |
 | `C7_ensamble` | C · 7b | Ensamble contra cada modelo solo + memoria en T4 | experimentos de A7 (o B/32 mientras) | sí |
+| `C_cierre` | C | Cierre: L/14 con 3 recortes y receta de B, un miembro por codificador, ensambles, apilamiento, tabla final y memoria | todas las ideas evaluadas | pasos 1 y 7 |
 | `C_release` | C | Comparar, publicar un release y probar un cartel | lo que se publique | no |
 
 Todos empiezan con la misma celda de preparación y terminan con la misma celda para **subir a la
@@ -154,6 +155,7 @@ Todos se corren desde la raíz del repo (en Colab, con `!` al inicio).
 | Comando | Qué hace |
 | --- | --- |
 | `python -m clasificador.ensamble <nombre> <miembro1> <miembro2> ... [--pesos ...]` | Ensamble → `modelos/<nombre>.pt` |
+| `python -m clasificador.cierre` | El mejor experimento de cada codificador (miembros del modelo final) y los combinados contra la base |
 | `python -m clasificador.apilamiento <nombre> <miembro> ... [--pliegues 5] [--etapa2 lineal\|mlp] [--l2 0.001]` | Apilamiento → `modelos/<nombre>.pt`, `predicciones/<nombre>_oof.npz` y, si es lineal, `resultados/<nombre>/pesos_etapa2.csv` y `mapa_calor.png` |
 
 **Publicar**
@@ -203,6 +205,7 @@ clasificador/
 ├── ranking.py           B · experimentos de una idea contra la base (regla de publicación)
 ├── apilamiento.py       C · etapa 2, predicciones fuera de pliegue
 ├── ensamble.py          C · promedio de probabilidades
+├── cierre.py            C · un miembro por codificador para el modelo final
 ├── combinado.py         contrato 4: cómo se combinan (lo usan evaluar y predictor)
 ├── entrenar.py          contrato 2
 ├── evaluar.py           contrato 3

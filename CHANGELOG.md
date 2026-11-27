@@ -50,4 +50,10 @@ creyó que ayudaría. Los cambios a los contratos del README también se anotan 
   `tests/test_apilamiento.py`; sin `xfail` en `test_idea6`.
 - `entrenar.py`: el ciclo de entrenamiento pasa a `entrenar_cabeza` (lo reutiliza el apilamiento
   por pliegue). Mismo resultado bit a bit que antes.
+- **Cierre:** `clasificador/cierre.py` elige un miembro por codificador (el primero según `ranking`;
+  sin combinados ni experimentos evaluados con menos películas de val que la base, como `A2_ocr`) y
+  `notebooks/C_cierre.ipynb` corre el cierre: vectores `clip_l14__3recortes`, experimentos
+  `A1_l14_3recortes` y `B_l14_combinado_sinpw` (3 semillas), ensambles, apilamiento, tabla final y
+  memoria en T4. Se creyó que llevar a L/14 lo que ayudó en B/32 (3 recortes, MLP + focal) y combinar
+  codificadores daría el mejor modelo para el release. Prueba en `tests/test_cierre.py`.
 - Pendiente: publicar `v0.1.0` con la base reproducida (debe dar F1 macro 0.537 en test).

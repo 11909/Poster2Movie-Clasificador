@@ -12,6 +12,7 @@ lo cargan el predictor y `evaluar`. Lo que falta es **decidir qué combinar** y 
 | --- | --- | --- | --- | --- |
 | 6 · Apilamiento | `C-apilamiento` | `notebooks/C6_apilamiento.ipynb` | `clasificador/apilamiento.py` | no |
 | 7b · Ensamble | `C-ensamble` | `notebooks/C7_ensamble.ipynb` | `clasificador/ensamble.py` | para medir memoria |
+| Cierre | `C-cierre` | `notebooks/C_cierre.ipynb` | `clasificador/cierre.py` | pasos 1 y 7 |
 | Releases | `release-<tag>` | `notebooks/C_release.ipynb` | `clasificador/release.py` (ya existe) | no |
 
 **Primero:** `notebooks/00_reproducir_base.ipynb` (una sola vez para todo el equipo) → `v0.1.0`.
@@ -55,6 +56,20 @@ va con Thriller o Crimen).
 - [x] Quitar el `xfail` de `test_idea6_pliegues_por_franquicia` (y flujo completo en `tests/test_apilamiento.py`).
 
 **Listo cuando** está en validación y el mapa 17 × 17 queda en `resultados/C6_apilamiento/`.
+
+## Cierre · del registro al modelo final
+
+Con todas las ideas evaluadas en val (27 nov): CLIP L/14 es el salto grande (`A7_l14`: F1 macro
+0.605, +0.061; débiles 0.429, +0.045). `A1_3recortes` ayuda en B/32 (+0.019) y la receta de B
+(MLP + focal) da una mejora del tamaño del ruido en B/32. `A2_ocr` solo tiene 195 películas de val
+(muestra de 2 mil): no es comparable y no entra al ensamble.
+
+- [ ] Vectores `clip_l14__3recortes` (GPU) y experimentos `A1_l14_3recortes`, `B_l14_combinado_sinpw` (+ `_s1`, `_s2`).
+- [ ] `python -m clasificador.cierre`: un miembro por codificador (excluye combinados y evaluados con menos películas).
+- [ ] Ensambles `C7_top2`, `C7_todos`, `C7_todos_3recortes` y apilados `C6_mejor`, `C6_todos`.
+- [ ] Tabla final, memoria en T4 y release `v0.2.0` con el candidato (`C_release`).
+
+**Listo cuando** el candidato está publicado como release y la demo lo usa.
 
 ---
 
