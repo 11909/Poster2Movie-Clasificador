@@ -96,7 +96,9 @@ La lógica vive en `clasificador/*.py`; el notebook solo la corre.
 | `C6_apilamiento` | C · 6 | Etapa 2 fuera de pliegue + mapa de calor 17 × 17 | cualquier experimento | no |
 | `C7_ensamble` | C · 7b | Ensamble contra cada modelo solo + memoria en T4 | experimentos de A7 (o B/32 mientras) | sí |
 | `C_cierre` | C | Cierre: L/14 con 3 recortes y receta de B, un miembro por codificador, ensambles, apilamiento, tabla final y memoria | todas las ideas evaluadas | pasos 1 y 7 |
+| `C_cierre_kaggle` | C | Lo mismo en Kaggle (botón en `C_cierre`); baja y sube al Drive del equipo con rclone | secreto `RCLONE_DRIVE_TOKEN` en Kaggle | pasos 1 y 7 |
 | `C_release` | C | Comparar, publicar un release y probar un cartel | lo que se publique | no |
+| `C_release_kaggle` | C | Lo mismo en Kaggle (botón en `C_release`); baja del Drive con rclone el `.pt` y sus vectores | secreto `RCLONE_DRIVE_TOKEN` en Kaggle | no |
 
 Todos empiezan con la misma celda de preparación y terminan con la misma celda para **subir a la
 rama de la idea** (nunca a `main`). En Colab el repo se borra al cerrar: suban `resultados/` antes.

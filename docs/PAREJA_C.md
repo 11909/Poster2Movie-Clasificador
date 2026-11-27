@@ -12,8 +12,8 @@ lo cargan el predictor y `evaluar`. Lo que falta es **decidir qué combinar** y 
 | --- | --- | --- | --- | --- |
 | 6 · Apilamiento | `C-apilamiento` | `notebooks/C6_apilamiento.ipynb` | `clasificador/apilamiento.py` | no |
 | 7b · Ensamble | `C-ensamble` | `notebooks/C7_ensamble.ipynb` | `clasificador/ensamble.py` | para medir memoria |
-| Cierre | `C-cierre` | `notebooks/C_cierre.ipynb` | `clasificador/cierre.py` | pasos 1 y 7 |
-| Releases | `release-<tag>` | `notebooks/C_release.ipynb` | `clasificador/release.py` (ya existe) | no |
+| Cierre | `C-cierre` | `notebooks/C_cierre.ipynb` (o `C_cierre_kaggle.ipynb` en Kaggle) | `clasificador/cierre.py` | pasos 1 y 7 |
+| Releases | `release-<tag>` | `notebooks/C_release.ipynb` (o `C_release_kaggle.ipynb` en Kaggle) | `clasificador/release.py` (ya existe) | no |
 
 **Primero:** `notebooks/00_reproducir_base.ipynb` (una sola vez para todo el equipo) → `v0.1.0`.
 En test debe dar F1 macro **0.537**; si no, no se publica y se avisa.
