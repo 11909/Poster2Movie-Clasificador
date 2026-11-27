@@ -100,7 +100,6 @@ def test_idea5_zeroshot():
 
 # --- Pareja C
 
-@pendiente("Pareja C, idea 6")
 def test_idea6_pliegues_por_franquicia():
     from clasificador.apilamiento import pliegues
 

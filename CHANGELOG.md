@@ -39,4 +39,15 @@ creyó que ayudaría. Los cambios a los contratos del README también se anotan 
 - **Para integrar en el repo principal:** una cabeza con GELU o LayerNorm necesita llevar
   `construir_cabeza` de `cabezas.py` a `p2m/clasificador.py` (ver `docs/PAREJA_C.md`).
 - **Resultados de la Pareja B (validación; base: F1 macro 0.544, débiles 0.384):** focal γ=1, 2, 3 igual a la base (cabeza lineal). Pistas zero-shot: igual a la base con cabeza lineal y peor con MLP (0.535, sobreajuste). MLP 512×256 GELU LayerNorm dropout 0.5: F1 macro 0.544 a 0.550 con 4 semillas, sin mejora confiable en los débiles. `B_combinado` (ese MLP + focal γ=2), 4 semillas: F1 macro 0.551 (+0.007) y mAP 0.548 (+0.010); débiles 0.386 (+0.002, dentro del ruido: suben Misterio y Crimen, bajan Historia y Fantasía). Sin `pos_weight` (focal γ=2, 4 semillas): F1 macro 0.548 con cabeza lineal; `B_combinado_sinpw` F1 macro 0.551, mAP 0.552, débiles 0.388 (varía 0.374 a 0.399 entre semillas; Misterio sube en las 4). Base con 4 semillas: F1 macro 0.544 a 0.545.
+- **Idea 6 (apilamiento):** `clasificador/apilamiento.py`. `pliegues` reparte train en k pliegues
+  por franquicia (columna `coleccion`; una saga nunca en dos pliegues). `apilar` reentrena cada
+  miembro k veces con su misma receta para tener predicciones **fuera de pliegue** de train, entrena
+  una etapa 2 lineal 17 → 17 residual (arranca en ceros = la etapa 1 tal cual; L2 hacia cero; paro
+  temprano con la pérdida en val), calibra umbrales en val sobre la salida final y guarda el
+  combinado (contrato 4). También guarda `predicciones/<nombre>_oof.npz` y, si es lineal,
+  `resultados/<nombre>/pesos_etapa2.csv` y `mapa_calor.png`. Se creyó que aprovechar con qué géneros
+  aparece cada uno (Misterio con Thriller o Crimen) ayudaría a los débiles. Prueba en
+  `tests/test_apilamiento.py`; sin `xfail` en `test_idea6`.
+- `entrenar.py`: el ciclo de entrenamiento pasa a `entrenar_cabeza` (lo reutiliza el apilamiento
+  por pliegue). Mismo resultado bit a bit que antes.
 - Pendiente: publicar `v0.1.0` con la base reproducida (debe dar F1 macro 0.537 en test).

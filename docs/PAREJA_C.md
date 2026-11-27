@@ -40,13 +40,19 @@ umbrales. Nada se entrena desde cero.
 Una etapa 2 corrige las 17 probabilidades con cómo se juntan los géneros (Misterio casi siempre
 va con Thriller o Crimen).
 
-- [ ] `pliegues`: 5 pliegues de train **por franquicia** (columna `coleccion`; una saga nunca en dos).
-- [ ] `apilar`: predicciones **fuera de pliegue** de la etapa 1 (entrenar 5 veces, predecir el
-      pliegue que no vio), etapa 2 lineal 17 → 17 con `residual: True` (solo ajusta), regularizada;
-      umbrales calibrados en val; guardar como combinado. Luego MLP si ayuda.
-- [ ] `python -m clasificador.apilamiento C6_apilamiento base` → evaluar → comparar.
-- [ ] Mapa de calor 17 × 17 de los pesos (celda del notebook) para el reporte.
-- [ ] Quitar el `xfail` de `test_idea6_pliegues_por_franquicia`.
+- [x] `pliegues`: 5 pliegues de train **por franquicia** (columna `coleccion`; una saga nunca en dos).
+      Las franquicias se barajan con semilla fija y se reparten de la más grande a la más chica
+      al pliegue con menos películas: tamaños casi iguales y no depende del orden de las filas.
+- [x] `apilar`: predicciones **fuera de pliegue** de la etapa 1 (cada miembro se reentrena 5 veces
+      con su misma receta, `entrenar.entrenar_cabeza`, y predice el pliegue que no vio), etapa 2
+      lineal 17 → 17 con `residual: True` que arranca en ceros (solo ajusta), regularizada con L2
+      hacia cero (`--l2`) y con paro temprano por la pérdida en val; umbrales calibrados en val;
+      guardado como combinado. MLP disponible con `--etapa2 mlp`. Acepta varios miembros
+      (apilar sobre un ensamble) con `--pesos` como el ensamble.
+- [ ] `python -m clasificador.apilamiento C6_apilamiento base` → evaluar → comparar (en Colab, con los datos reales).
+- [x] Mapa de calor 17 × 17: `apilamiento.mapa_calor` (lo corre el comando y la celda del notebook)
+      a partir de `resultados/<nombre>/pesos_etapa2.csv`. Falta generarlo con los datos reales.
+- [x] Quitar el `xfail` de `test_idea6_pliegues_por_franquicia` (y flujo completo en `tests/test_apilamiento.py`).
 
 **Listo cuando** está en validación y el mapa 17 × 17 queda en `resultados/C6_apilamiento/`.
 

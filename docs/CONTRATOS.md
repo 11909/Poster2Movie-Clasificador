@@ -106,7 +106,10 @@ propios umbrales. Se arma con `clasificador.combinado.armar(...)` y se guarda co
 - **Ensamble (7b):** varios miembros, `apilamiento: None`.
 - **Apilamiento (6):** la etapa 2 recibe las 17 probabilidades promediadas. Con `residual: True`
   (recomendado) su salida se suma al logit del promedio: solo ajusta lo que ya había. Sobre un
-  solo modelo = un miembro con peso 1.
+  solo modelo = un miembro con peso 1. `clasificador.apilamiento` la entrena con predicciones
+  fuera de pliegue de train (pliegues por franquicia) y además deja
+  `<P2M_SALIDAS>/predicciones/<nombre>_oof.npz` (`ids_train`, `pliegue`, `prob_train` y
+  `prob_train__<miembro>`).
 - **Cómo combinar está definido en un solo lugar** (`combinado.probabilidades`): lo usan
   `evaluar` (con vectores) y `predictor` (con carteles), así dan lo mismo. Un `.pt` normal se
   predice como un combinado de un miembro.

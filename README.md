@@ -154,7 +154,7 @@ Todos se corren desde la raíz del repo (en Colab, con `!` al inicio).
 | Comando | Qué hace |
 | --- | --- |
 | `python -m clasificador.ensamble <nombre> <miembro1> <miembro2> ... [--pesos ...]` | Ensamble → `modelos/<nombre>.pt` |
-| `python -m clasificador.apilamiento <nombre> <miembro> ... [--pliegues 5]` | Apilamiento → `modelos/<nombre>.pt` |
+| `python -m clasificador.apilamiento <nombre> <miembro> ... [--pliegues 5] [--etapa2 lineal\|mlp] [--l2 0.001]` | Apilamiento → `modelos/<nombre>.pt`, `predicciones/<nombre>_oof.npz` y, si es lineal, `resultados/<nombre>/pesos_etapa2.csv` y `mapa_calor.png` |
 
 **Publicar**
 

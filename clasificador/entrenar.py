@@ -66,12 +66,12 @@ def nombre_embeddings(vectores: list[str]) -> str | None:
     return rutas.ALIAS_VECTORES.get(vectores[0], f"vectores/{vectores[0]}.npz")
 
 
-def entrenar(experimento: dict) -> Path:
+def entrenar_cabeza(experimento: dict, x_train: np.ndarray, y_train: np.ndarray,
+                    x_val: np.ndarray, y_val: np.ndarray) -> tuple[torch.nn.Module, float, int]:
+    """La receta de entrenamiento de un experimento (cabeza, pérdida, AdamW, paro temprano con
+    el F1 macro en val a umbral 0.5). Regresa (cabeza con la mejor época, ese F1, última época).
+    La usan `entrenar` y el apilamiento (idea 6), que la corre una vez por pliegue."""
     e = experimento["entrenamiento"]
-    x_train, y_train, _ = cargar_split("train", experimento["vectores"])
-    x_val, y_val, ids_val = cargar_split("val", experimento["vectores"])
-    print(f"{experimento['nombre']}: train {len(x_train)} | val {len(x_val)} | entrada {x_train.shape[1]}")
-
     torch.manual_seed(e["semilla"])
     cabeza = construir_cabeza(experimento["cabeza"], x_train.shape[1], len(GENEROS))
     perdida = construir_perdida(experimento["perdida"], y_train)
@@ -98,10 +98,20 @@ def entrenar(experimento: dict) -> Path:
             sin_mejorar += 1
             if sin_mejorar >= e["paciencia"]:
                 break
+    cabeza.load_state_dict(mejor_estado)
+    return cabeza.eval(), mejor, epoca
+
+
+def entrenar(experimento: dict) -> Path:
+    x_train, y_train, _ = cargar_split("train", experimento["vectores"])
+    x_val, y_val, ids_val = cargar_split("val", experimento["vectores"])
+    print(f"{experimento['nombre']}: train {len(x_train)} | val {len(x_val)} | entrada {x_train.shape[1]}")
+
+    cabeza, mejor, epoca = entrenar_cabeza(experimento, x_train, y_train, x_val, y_val)
+    mejor_estado = cabeza.state_dict()
     print(f"Época {epoca}: mejor F1 macro en val (umbral 0.5) = {mejor:.4f}")
 
-    cabeza.load_state_dict(mejor_estado)
-    cabeza.eval()
+    xv = torch.tensor(x_val)
     with torch.no_grad():
         prob_val = torch.sigmoid(cabeza(xv)).numpy()
     umbrales = calibrar_umbrales(y_val, prob_val)
