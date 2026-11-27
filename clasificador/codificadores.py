@@ -7,13 +7,17 @@ predictor, así el entrenamiento y la demo procesan igual el cartel.
 Hoy existe:
     clip_b32 + centro      CLIP ViT-B/32, recorte central de 224 px (el de la base)
     clip_b32 + zeroshot    17 similitudes cartel-frases de género (Pareja B, idea 5; clasificador/zeroshot.py)
+    clip_l14 + centro      CLIP ViT-L/14, recorte central (768)
+    siglip_base + centro   SigLIP Base, recorte central (768)
+    variantes              centro, zeroshot, relleno (cartel completo con bordes), 3recortes (concatenado 3x), ocr (EasyOCR -> texto)
 
 Pendiente (Pareja A):
-    variantes `relleno` y `3recortes` (idea 1), `ocr` (idea 2)
-    codificadores `clip_l14`, `siglip_base`, ... (idea 7a)
+    codificadores opcionales `siglip_so400m`, `dinov2_base` (idea 7a)
 
 Uso:
     python -m clasificador.codificadores clip_b32 --variante centro
+    python -m clasificador.codificadores clip_b32 --variante relleno
+    python -m clasificador.codificadores clip_b32 --variante 3recortes
     python -m clasificador.codificadores clip_b32 --variante ocr --muestra 2000   # prueba chica
 
 Para agregar algo pendiente: muévanlo de *_PENDIENTES a CODIFICADORES / VARIANTES, implementen
@@ -29,6 +33,7 @@ from functools import lru_cache
 import numpy as np
 import pyarrow.parquet as pq
 import torch
+from PIL import ImageOps
 
 from clasificador import rutas
 from p2m import datos
@@ -39,18 +44,14 @@ CODIFICADORES = {
     "clip_l14": "openai/clip-vit-large-patch14",
     "siglip_base": "google/siglip-base-patch16-224",
 }
-VARIANTES = ["centro", "zeroshot"]
+VARIANTES = ["centro", "zeroshot", "relleno", "3recortes", "ocr"]
 
 # Lo que falta, con quién lo hace. Se pueden pedir por nombre: dan un error que dice qué falta.
 CODIFICADORES_PENDIENTES = {
     "siglip_so400m": ("google/siglip-so400m-patch14-384", "Pareja A, idea 7a, opcional (1152)"),
     "dinov2_base": ("facebook/dinov2-base", "Pareja A, idea 7a, opcional (768; sin texto)"),
 }
-VARIANTES_PENDIENTES = {
-    "relleno": "Pareja A, idea 1: relleno a cuadrado, un vector",
-    "3recortes": "Pareja A, idea 1: arriba/centro/abajo, promediar o concatenar",
-    "ocr": "Pareja A, idea 2: EasyOCR -> codificar_texto (vector de ceros si no hay texto)",
-}
+VARIANTES_PENDIENTES = {}
 DISPOSITIVO = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -62,12 +63,22 @@ def cargar_clip(modelo_hf: str):
 
     return CLIPProcessor.from_pretrained(modelo_hf), CLIPModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
 
+
 @lru_cache(maxsize=None)
 def cargar_siglip(modelo_hf: str):
     """(procesador, modelo) de SigLIP, UNA vez por modelo (misma idea que cargar_clip)."""
     from transformers import AutoModel, AutoProcessor
 
     return AutoProcessor.from_pretrained(modelo_hf), AutoModel.from_pretrained(modelo_hf).to(DISPOSITIVO).eval()
+
+
+@lru_cache(maxsize=None)
+def cargar_ocr():
+    """Reader de EasyOCR cargado UNA sola vez en memoria."""
+    import easyocr
+
+    return easyocr.Reader(["en", "es"], gpu=torch.cuda.is_available())
+
 
 def pendiente(codificador: str, variante: str = "centro") -> None:
     """Error claro si se pide algo que todavía no existe."""
@@ -87,12 +98,26 @@ def recortes(imagen, variante: str = "centro") -> list:
 
     centro      [cartel]: el procesador de CLIP reescala y recorta el cuadrado central
     zeroshot    [cartel]: el mismo recorte que centro; la diferencia está después (17 similitudes)
-    relleno     [cartel con bordes hasta ser cuadrado]: CLIP lo ve completo     (PENDIENTE)
-    3recortes   [arriba, centro, abajo]: tres cuadrados que cubren el cartel     (PENDIENTE)
+    relleno     [cartel con bordes hasta ser cuadrado]: CLIP lo ve completo
+    3recortes   [arriba, centro, abajo]: tres cuadrados que cubren el cartel
+    ocr         [cartel]: lee texto con EasyOCR y lo codifica con CLIP (máx. 77 tokens)
 
     Se usa IGUAL al calcular los vectores y al predecir (la clase del codificador la llama)."""
-    if variante in ("centro", "zeroshot"):
+    if variante in ("centro", "zeroshot", "ocr"):
         return [imagen]
+    if variante == "relleno":
+        lado = max(imagen.size)
+        return [ImageOps.pad(imagen, (lado, lado), color=(0, 0, 0))]
+    if variante == "3recortes":
+        w, h = imagen.size
+        if h <= w:
+            return [imagen, imagen, imagen]
+        mitad = (h - w) // 2
+        return [
+            imagen.crop((0, 0, w, w)),             # arriba (título)
+            imagen.crop((0, mitad, w, mitad + w)), # centro (arte principal)
+            imagen.crop((0, h - w, w, h)),         # abajo (frase promocional)
+        ]
     pendiente("clip_b32", variante)
     raise ValueError(f"Variante sin recortes: '{variante}'.")
 
@@ -116,22 +141,53 @@ class Codificador:
 
 
 class CodificadorCLIP(Codificador):
-    """CLIP de OpenAI. Port de `CodificadorCLIP` del repo principal: vectores normalizados."""
+    """CLIP de OpenAI. Port de `CodificadorCLIP` del repo principal: vectores normalizados.
+
+    - Para `3recortes`, concatena los 3 vectores normalizados [arriba, centro, abajo]
+      (dim = projection_dim * 3, p. ej. 1536 en B/32) para conservar la posición espacial.
+    - Para `ocr`, lee texto con EasyOCR, lo codifica con `codificar_texto` (77 tokens)
+      y devuelve un vector de ceros cuando el cartel no contiene texto legible."""
 
     def __init__(self, codificador: str = "clip_b32", variante: str = "centro"):
         pendiente(codificador, variante)
+        self.variante = variante
         self.nombre = f"{codificador}__{variante}"
         self.modelo_hf = CODIFICADORES[codificador]
         self.procesador, self.modelo = cargar_clip(self.modelo_hf)
-        self.dim = self.modelo.config.projection_dim
+        base_dim = self.modelo.config.projection_dim
+        self.dim = base_dim * 3 if variante == "3recortes" else base_dim
 
     @torch.inference_mode()
     def codificar(self, imagenes) -> np.ndarray:
-        entrada = self.procesador(images=imagenes, return_tensors="pt").to(DISPOSITIVO)
+        if self.variante == "ocr":
+            lector = cargar_ocr()
+            textos = []
+            sin_texto = []
+            for img in imagenes:
+                palabras = lector.readtext(np.array(img), detail=0)
+                texto = " ".join(palabras).strip()
+                textos.append(texto if texto else "movie poster")
+                sin_texto.append(len(texto) == 0)
+            vectores = self.codificar_texto(textos)
+            for idx, vacio in enumerate(sin_texto):
+                if vacio:
+                    vectores[idx] = np.zeros(self.dim, dtype=np.float32)
+            return vectores
+
+        if self.variante == "centro":
+            imgs_a_procesar = imagenes
+        else:
+            imgs_a_procesar = [r for img in imagenes for r in recortes(img, self.variante)]
+
+        entrada = self.procesador(images=imgs_a_procesar, return_tensors="pt").to(DISPOSITIVO)
         vectores = self.modelo.get_image_features(**entrada)
         if not torch.is_tensor(vectores):  # transformers >= 5 regresa un objeto
             vectores = vectores.pooler_output
-        return torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
+        vectores = torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
+
+        if self.variante == "3recortes":
+            vectores = vectores.reshape(len(imagenes), -1)
+        return vectores
 
     @torch.inference_mode()
     def codificar_texto(self, textos: list[str]) -> np.ndarray:
@@ -142,6 +198,7 @@ class CodificadorCLIP(Codificador):
         if not torch.is_tensor(vectores):
             vectores = vectores.pooler_output
         return torch.nn.functional.normalize(vectores, dim=-1).float().cpu().numpy()
+
 
 class CodificadorSigLIP(Codificador):
     """SigLIP de Google. Sin projection_dim: `dim` sale del tamaño del vector."""

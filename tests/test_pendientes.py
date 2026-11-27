@@ -26,8 +26,6 @@ def pendiente(quien):
 def test_lo_pendiente_avisa():
     with pytest.raises(NotImplementedError, match="Pareja A"):
         codificadores.crear_codificador("siglip_so400m__centro")
-    with pytest.raises(NotImplementedError, match="idea 1"):
-        codificadores.crear_codificador("clip_b32__3recortes")
     with pytest.raises(ValueError):
         construir_cabeza({"tipo": "mlp", "ocultas": [8], "activasion": "gelu"}, 4, 17)  # clave mal escrita
 
@@ -45,7 +43,6 @@ CARTEL.paste((255, 0, 0), (0, 0, 384, 100))      # franja roja arriba (título)
 CARTEL.paste((0, 0, 255), (0, 476, 384, 576))    # franja azul abajo
 
 
-@pendiente("Pareja A, idea 1")
 def test_idea1_relleno_y_tres_recortes():
     assert {"relleno", "3recortes"} <= set(codificadores.VARIANTES)
     [relleno] = codificadores.recortes(CARTEL, "relleno")
@@ -56,7 +53,6 @@ def test_idea1_relleno_y_tres_recortes():
     assert abajo.getpixel((abajo.width // 2, abajo.height - 5)) == (0, 0, 255)
 
 
-@pendiente("Pareja A, idea 2")
 def test_idea2_ocr_registrado():
     assert "ocr" in codificadores.VARIANTES and "ocr" not in codificadores.VARIANTES_PENDIENTES
 
