@@ -1,0 +1,10 @@
+# La mejor receta de la Pareja B sobre B/32 (B_combinado_sinpw: MLP 512x256 GELU LayerNorm + focal
+# sin pos_weight), ahora sobre CLIP L/14. Tres semillas: en B/32 la mejora era del tamaño del ruido.
+nombre: B_l14_combinado_sinpw
+pareja: B
+descripcion: "Ideas 3 + 4 sobre CLIP L/14: MLP 512x256 GELU LayerNorm dropout 0.5 + focal gamma 2 sin pos_weight."
+vectores:
+  - clip_l14__centro
+cabeza: {tipo: mlp, ocultas: [512, 256], activacion: gelu, layernorm: true, dropout: 0.5}
+perdida: {tipo: focal, gamma: 2, pos_weight: false}
+entrenamiento: {tasa: 0.0003, weight_decay: 0.001, semilla: 42}
