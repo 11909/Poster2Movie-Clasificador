@@ -1,0 +1,2 @@
+fecha,nombre,pareja,split,F1_macro,F1_micro,mAP,F1_Mystery,F1_History,F1_Fantasy,F1_Crime,vectores,commit
+2026-11-28T01:56:33+00:00,B_l14_combinado_sinpw,B,val,0.6144,0.6527,0.6327,0.3833,0.4604,0.4872,0.4738,clip_l14__centro,2587e15
